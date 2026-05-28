@@ -1,0 +1,38 @@
+:root {
+  --color-background: #f4efe7;
+  --color-background-soft: rgba(255, 255, 255, 0.72);
+  --color-heading: #173937;
+  --color-text: #364543;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at top right, rgba(230, 179, 105, 0.32), transparent 18%),
+    linear-gradient(180deg, #f8f4ee 0%, #f2ebe0 48%, #ede5d8 100%);
+  line-height: 1.6;
+  font-family:
+    'Segoe UI',
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font: inherit;
+}
