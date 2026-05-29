@@ -1,39 +1,40 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
-import { useCounterStore } from '@/stores/counter'
-import type { StudyStatus } from '@/types/study'
+import AddEditDialog from '@/views/components/addEditDialog.vue'
+import { useTaskBoard } from '@/composables/useTaskBoard'
 
-const careerPlanStore = useCounterStore()
-
-// storeToRefs 可以在解构时保留响应式能力，这是 Pinia 里很常见的写法。
 const {
   activeFilter,
   completedCount,
   doingCount,
-  filteredTasks,
   pendingCount,
   summaryCards,
   weeklyFocusHours,
-} = storeToRefs(careerPlanStore)
-
-const { addWeeklyFocusHours, setActiveFilter, updateTaskStatus } = careerPlanStore
-
-const filterOptions: Array<{ label: string; value: StudyStatus | 'all' }> = [
-  { label: '全部', value: 'all' },
-  { label: '待开始', value: 'todo' },
-  { label: '进行中', value: 'doing' },
-  { label: '已完成', value: 'done' },
-]
-
-const statusTextMap: Record<StudyStatus, string> = {
-  todo: '待开始',
-  doing: '进行中',
-  done: '已完成',
-}
-
-function markTask(taskId: number, status: StudyStatus) {
-  updateTaskStatus(taskId, status)
-}
+  loading,
+  filterOptions,
+  statusTextMap,
+  sortField,
+  sortDirection,
+  sortFieldOptions,
+  sortDirectionOptions,
+  keyword,
+  normalizedKeyword,
+  searchedTasks,
+  currentPage,
+  pageSize,
+  total,
+  pagedItems,
+  handleCurrentChange,
+  handleSizeChange,
+  dialogVisible,
+  dialogMode,
+  dialogTaskId,
+  addWeeklyFocusHours,
+  setActiveFilter,
+  markTask,
+  handleDialogOpen,
+  handleDialogEdit,
+  handleTaskDelete,
+} = useTaskBoard()
 </script>
 
 <template>
@@ -41,10 +42,10 @@ function markTask(taskId: number, status: StudyStatus) {
     <section class="hero-card">
       <div>
         <p class="section-label">本周目标</p>
-        <h2>先把 TypeScript 学成一门“能落到项目里”的语言</h2>
+        <h2>先把 TypeScript 学成一门能落到项目里的语言</h2>
         <p class="hero-copy">
-          这个页面模拟了一个真实一点的学习看板：左边是任务和筛选，右边是统计和解释。数据放在
-          Pinia 里，所以切换路由后状态不会丢。
+          这页现在把筛选、排序、查询、分页、弹框表单都拆成了组合式逻辑。你也可以把删除动作看成一个完整的小闭环：
+          Pinia action、确认弹框、列表更新。
         </p>
       </div>
 
@@ -57,6 +58,10 @@ function markTask(taskId: number, status: StudyStatus) {
         </div>
       </div>
     </section>
+
+    <div class="toolbar">
+      <el-button type="primary" @click="handleDialogOpen">新增任务</el-button>
+    </div>
 
     <section class="summary-grid">
       <article v-for="card in summaryCards" :key="card.label" class="summary-card">
@@ -87,8 +92,57 @@ function markTask(taskId: number, status: StudyStatus) {
           </div>
         </div>
 
+        <div class="control-bar">
+          <div class="search-box">
+            <span>关键字查询</span>
+            <el-input
+              v-model="keyword"
+              clearable
+              placeholder="按任务名称、描述、分类查询"
+            />
+          </div>
+
+          <div class="sort-bar">
+            <div class="sort-item">
+              <span>排序字段</span>
+              <el-select v-model="sortField" class="sort-select">
+                <el-option
+                  v-for="item in sortFieldOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </div>
+
+            <div class="sort-item">
+              <span>排序方向</span>
+              <el-select v-model="sortDirection" class="sort-select">
+                <el-option
+                  v-for="item in sortDirectionOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </div>
+          </div>
+        </div>
+
+        <div class="meta-line">
+          <span>当前查询：{{ normalizedKeyword || '无' }}</span>
+          <span>筛选后总数：{{ searchedTasks.length }}</span>
+        </div>
+
+        <div v-if="loading" class="loading-text">正在加载任务列表...</div>
+
         <ul class="task-list">
-          <li v-for="task in filteredTasks" :key="task.id" class="task-card">
+          <li
+            v-for="task in pagedItems"
+            :key="task.id"
+            class="task-card"
+            @click="handleDialogEdit(task.id)"
+          >
             <div class="task-main">
               <div class="task-meta">
                 <span class="category">{{ task.category }}</span>
@@ -105,34 +159,41 @@ function markTask(taskId: number, status: StudyStatus) {
               <span class="hours">{{ task.estimateHours }}h</span>
 
               <div class="status-actions">
-                <button type="button" @click="markTask(task.id, 'todo')">待开始</button>
-                <button type="button" @click="markTask(task.id, 'doing')">进行中</button>
-                <button type="button" @click="markTask(task.id, 'done')">完成</button>
+                <button type="button" @click.stop="markTask(task.id, 'todo')">待开始</button>
+                <button type="button" @click.stop="markTask(task.id, 'doing')">进行中</button>
+                <button type="button" @click.stop="markTask(task.id, 'done')">已完成</button>
+                <button class="danger-button" type="button" @click.stop="handleTaskDelete(task.id)">
+                  删除
+                </button>
               </div>
             </div>
           </li>
         </ul>
+
+        <div class="pagination-wrap">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[3, 5, 10]"
+            layout="total, sizes, prev, pager, next"
+            :total="total"
+            @current-change="handleCurrentChange"
+            @size-change="handleSizeChange"
+          />
+        </div>
       </article>
 
       <aside class="panel side-panel">
         <div>
           <p class="section-label">学习观察</p>
-          <h3>这页里能看到的 TS / Pinia 点</h3>
+          <h3>这页里能看到的 TS / Vue3 点</h3>
         </div>
 
         <ul class="insight-list">
-          <li>
-            `StudyStatus` 是一个联合类型，它限制状态只能是 `todo`、`doing`、`done`。
-          </li>
-          <li>
-            `storeToRefs()` 让我们从 Pinia store 解构状态时，依然保留响应式。
-          </li>
-          <li>
-            `summaryCards` 是 computed 派生数据，原始状态一变，统计卡片会自动更新。
-          </li>
-          <li>
-            `About` 页会读取同一份 store，这就是全局状态管理最直观的价值。
-          </li>
+          <li>`deleteTask(taskId: number)` 是最基础但很真实的 Pinia action。</li>
+          <li>`handleTaskDelete()` 把确认弹框和 store 删除动作连起来，这就是页面层逻辑。</li>
+          <li>删除按钮用了 `@click.stop`，避免触发整卡的编辑逻辑。</li>
+          <li>删除后分页会自动联动，因为页码逻辑已经被抽到 `usePagination()` 里了。</li>
         </ul>
 
         <div class="mini-stats">
@@ -152,6 +213,8 @@ function markTask(taskId: number, status: StudyStatus) {
       </aside>
     </section>
   </main>
+
+  <AddEditDialog v-model:show="dialogVisible" :mode="dialogMode" :task-id="dialogTaskId" />
 </template>
 
 <style scoped>
@@ -241,6 +304,11 @@ function markTask(taskId: number, status: StudyStatus) {
   color: #fff8ef;
 }
 
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -299,6 +367,58 @@ function markTask(taskId: number, status: StudyStatus) {
   color: #fff8ef;
 }
 
+.control-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 280px;
+  flex: 1;
+}
+
+.search-box span,
+.sort-item span,
+.meta-line {
+  color: #56615f;
+  font-size: 0.9rem;
+}
+
+.sort-bar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sort-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sort-select {
+  width: 160px;
+}
+
+.meta-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: #7a5d2d;
+}
+
 .task-list,
 .insight-list {
   list-style: none;
@@ -317,6 +437,7 @@ function markTask(taskId: number, status: StudyStatus) {
   padding: 1.1rem;
   border-radius: 22px;
   background: #f6f8f7;
+  cursor: pointer;
 }
 
 .task-main h4 {
@@ -416,9 +537,21 @@ function markTask(taskId: number, status: StudyStatus) {
   border: 1px solid rgba(29, 59, 54, 0.08);
 }
 
+.danger-button {
+  background: #fde7e2;
+  color: #b6422a;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
 .status-actions button:hover,
 .focus-actions button:hover,
-.filter-group button:hover {
+.filter-group button:hover,
+.task-card:hover {
   transform: translateY(-1px);
 }
 
@@ -471,8 +604,17 @@ function markTask(taskId: number, status: StudyStatus) {
     align-items: stretch;
   }
 
-  .panel-header {
+  .panel-header,
+  .control-bar,
+  .sort-bar,
+  .sort-item,
+  .meta-line {
     flex-direction: column;
+  }
+
+  .toolbar,
+  .pagination-wrap {
+    justify-content: stretch;
   }
 }
 </style>

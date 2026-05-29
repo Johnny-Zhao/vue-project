@@ -34,6 +34,7 @@ const { pendingCount, completionRate } = storeToRefs(careerPlanStore)
       <RouterLink to="/">学习看板</RouterLink>
       <RouterLink to="/about">TS / Pinia 说明</RouterLink>
       <RouterLink to="/task-create">创建任务</RouterLink>
+      <RouterLink to="/truck-list">真实接口表格</RouterLink>
     </nav>
 
     <RouterView />
