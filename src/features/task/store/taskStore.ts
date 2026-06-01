@@ -1,11 +1,11 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { createTaskApi, deleteTaskApi, fetchTaskListApi, updateTaskApi } from '@/api/task'
-import type { CreateTaskForm, StudyStatus, StudyTask, SummaryCard } from '@/types/study'
+import { createTaskApi, deleteTaskApi, fetchTaskListApi, updateTaskApi } from '../api'
+import type { CreateTaskForm, StudyStatus, StudyTask, SummaryCard } from '../types'
 
 type TaskFilter = StudyStatus | 'all'
 
-export const useCounterStore = defineStore('careerPlan', () => {
+export const useTaskStore = defineStore('careerPlan', () => {
   const tasks = ref<StudyTask[]>([])
   const activeFilter = ref<TaskFilter>('all')
   const weeklyFocusHours = ref(10)
@@ -44,7 +44,7 @@ export const useCounterStore = defineStore('careerPlan', () => {
     {
       label: '已完成',
       value: String(completedCount.value),
-      hint: '完成会直接反映在首页和统计卡片里',
+      hint: '完成数会直接反映在首页和统计卡片里',
     },
     {
       label: '完成率',

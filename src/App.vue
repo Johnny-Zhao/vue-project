@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { RouterLink, RouterView } from 'vue-router'
-import { useCounterStore } from './stores/counter'
+import { useTaskStore } from '@/features/task/store'
 
-const careerPlanStore = useCounterStore()
-const { pendingCount, completionRate } = storeToRefs(careerPlanStore)
+const taskStore = useTaskStore()
+const { pendingCount, completionRate } = storeToRefs(taskStore)
 </script>
 
 <template>

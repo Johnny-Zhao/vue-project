@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { useCounterStore } from '@/stores/counter'
+import { useTaskStore } from '@/features/task/store'
 
-const careerPlanStore = useCounterStore()
-const { completionRate, filteredTasks, summaryCards, weeklyFocusHours } = storeToRefs(careerPlanStore)
+const taskStore = useTaskStore()
+const { completionRate, filteredTasks, summaryCards, weeklyFocusHours } = storeToRefs(taskStore)
 </script>
 
 <template>

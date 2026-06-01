@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import AddEditDialog from '@/views/components/addEditDialog.vue'
-import { useTaskBoard } from '@/composables/useTaskBoard'
+import TaskDialog from '@/features/task/components/TaskDialog.vue'
+import { useTaskBoard } from '@/features/task/composables/useTaskBoard'
 
 const {
   activeFilter,
@@ -214,7 +214,7 @@ const {
     </section>
   </main>
 
-  <AddEditDialog v-model:show="dialogVisible" :mode="dialogMode" :task-id="dialogTaskId" />
+  <TaskDialog v-model:show="dialogVisible" :mode="dialogMode" :task-id="dialogTaskId" />
 </template>
 
 <style scoped>

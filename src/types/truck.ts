@@ -34,6 +34,7 @@ export interface TruckListPageData {
   pageSize: number
   total: number
   list: TruckItem[]
+  extendContent?: unknown
 }
 
 export interface TruckListResponse {

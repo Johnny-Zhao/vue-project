@@ -1,6 +1,6 @@
 import { mockRequest } from '@/api/request'
-import type { CreateTaskForm, StudyTask } from '@/types/study'
 import type { ListResponse } from '@/types/request'
+import type { CreateTaskForm, StudyTask } from './types'
 
 const initialMockTasks: StudyTask[] = [
   {

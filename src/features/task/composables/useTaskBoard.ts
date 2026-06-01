@@ -1,14 +1,15 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { storeToRefs } from 'pinia'
-import { useCounterStore } from '@/stores/counter'
-import type { DialogMode, SortDirection, StudyStatus, StudyTask, TaskSortField } from '@/types/study'
-import { sortByField } from '@/utils/task'
 import { usePagination } from '@/composables/usePagination'
 import { useTaskSearch } from '@/composables/useTaskSearch'
+import { taskFilterOptions, taskStatusTextMap } from '../constants'
+import { useTaskStore } from '../store'
+import type { DialogMode, SortDirection, StudyStatus, StudyTask, TaskSortField } from '../types'
+import { sortByField } from '../utils'
 
 export function useTaskBoard() {
-  const careerPlanStore = useCounterStore()
+  const taskStore = useTaskStore()
 
   const {
     activeFilter,
@@ -19,23 +20,9 @@ export function useTaskBoard() {
     summaryCards,
     weeklyFocusHours,
     loading,
-  } = storeToRefs(careerPlanStore)
+  } = storeToRefs(taskStore)
 
-  const { addWeeklyFocusHours, setActiveFilter, updateTaskStatus, deleteTask, loadTasks } =
-    careerPlanStore
-
-  const filterOptions: Array<{ label: string; value: StudyStatus | 'all' }> = [
-    { label: '全部', value: 'all' },
-    { label: '待开始', value: 'todo' },
-    { label: '进行中', value: 'doing' },
-    { label: '已完成', value: 'done' },
-  ]
-
-  const statusTextMap: Record<StudyStatus, string> = {
-    todo: '待开始',
-    doing: '进行中',
-    done: '已完成',
-  }
+  const { addWeeklyFocusHours, setActiveFilter, updateTaskStatus, deleteTask, loadTasks } = taskStore
 
   const sortField = ref<TaskSortField>('estimateHours')
   const sortDirection = ref<SortDirection>('desc')
@@ -92,11 +79,7 @@ export function useTaskBoard() {
   const dialogTaskId = ref<number | null>(null)
 
   onMounted(() => {
-    if (careerPlanStore.tasks.length === 0) {
-      // loadTasks() 返回 Promise。
-      // 这里我们只是触发一次加载，不需要在 mounted 里等待它完成，
-      // 所以用 void 明确表示“这个返回值我就是故意不接”。
-      // 这样也能避免未处理 Promise 的提醒。
+    if (taskStore.tasks.length === 0) {
       void loadTasks()
     }
   })
@@ -131,7 +114,7 @@ export function useTaskBoard() {
       await deleteTask(taskId)
       ElMessage.success('任务已删除')
     } catch {
-      // 用户取消时不需要额外提示
+      // Ignore canceled confirmations.
     }
   }
 
@@ -143,8 +126,8 @@ export function useTaskBoard() {
     summaryCards,
     weeklyFocusHours,
     loading,
-    filterOptions,
-    statusTextMap,
+    filterOptions: taskFilterOptions,
+    statusTextMap: taskStatusTextMap,
     sortField,
     sortDirection,
     sortFieldOptions,

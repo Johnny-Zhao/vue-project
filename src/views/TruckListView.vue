@@ -132,29 +132,17 @@ onMounted(async () => {
         <div class="form-grid">
           <el-form-item label="Truck Type">
             <el-select v-model="queryForm.truckType" placeholder="Select truck type" clearable>
-              <el-option
-                v-for="item in truckTypeOptions"
-                :key="String(item.value)"
-                :label="item.label"
-                :value="item.value"
-              />
+              <el-option v-for="item in truckTypeOptions" :key="String(item.value)" :label="item.label"
+                :value="item.value" />
             </el-select>
           </el-form-item>
 
           <el-form-item label="Tractor Plate">
-            <el-input
-              v-model="queryForm.tractorLicensePlateNo"
-              placeholder="Enter tractor plate"
-              clearable
-            />
+            <el-input v-model="queryForm.tractorLicensePlateNo" placeholder="Enter tractor plate" clearable />
           </el-form-item>
 
           <el-form-item label="Trailer Plate">
-            <el-input
-              v-model="queryForm.trailerLicensePlateNo"
-              placeholder="Enter trailer plate"
-              clearable
-            />
+            <el-input v-model="queryForm.trailerLicensePlateNo" placeholder="Enter trailer plate" clearable />
           </el-form-item>
         </div>
 
@@ -171,7 +159,6 @@ onMounted(async () => {
         </div>
       </el-form>
     </article>
-
     <article class="table-panel">
       <div class="panel-head">
         <div>
@@ -238,15 +225,9 @@ onMounted(async () => {
       </el-table>
 
       <div class="pagination-wrap">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="queryForm.pageSize"
-          :page-sizes="[20, 50, 100]"
-          layout="total, sizes, prev, pager, next"
-          :total="total"
-          @current-change="handleCurrentChange"
-          @size-change="handleSizeChange"
-        />
+        <el-pagination v-model:current-page="currentPage" v-model:page-size="queryForm.pageSize"
+          :page-sizes="[20, 50, 100]" layout="total, sizes, prev, pager, next" :total="total"
+          @current-change="handleCurrentChange" @size-change="handleSizeChange" />
       </div>
     </article>
   </section>
@@ -365,6 +346,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 960px) {
+
   .page-head,
   .form-grid {
     grid-template-columns: 1fr;
