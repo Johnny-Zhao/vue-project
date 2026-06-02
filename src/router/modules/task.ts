@@ -1,11 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
 
 export const taskRoutes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: HomeView,
+    component: () => import('@/views/HomeView.vue'),
     meta: {
       requiresAuth: true,
       title: 'Task Board',
