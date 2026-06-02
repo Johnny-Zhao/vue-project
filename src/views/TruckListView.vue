@@ -29,7 +29,7 @@ const queryFields: FormFieldSchema[] = [
   {
     key: 'truckType',
     label: 'Truck Type',
-    type: 'select',
+    type: 'select1',
     options: truckTypeOptions,
     defaultValue: '',
   },
@@ -251,7 +251,10 @@ function handleSelectionChange(rows: Record<string, unknown>[]) {
   selectedRows.value = rows as TableLikeTruckRow[]
 }
 
-function handleSortChange(payload: { prop: string | null; order: 'ascending' | 'descending' | null }) {
+function handleSortChange(payload: {
+  prop: string | null
+  order: 'ascending' | 'descending' | null
+}) {
   sortState.prop = payload.prop
   sortState.order = payload.order
 }
@@ -294,7 +297,10 @@ onMounted(async () => {
           This page is restricted to the admin role at the route level. Batch operations are also
           hidden behind page-level permissions.
         </p>
-        <p v-permission="{ permissions: 'truck:batch' }" class="permission-copy permission-copy-granted">
+        <p
+          v-permission="{ permissions: 'truck:batch' }"
+          class="permission-copy permission-copy-granted"
+        >
           Batch actions are available for this role.
         </p>
         <p v-if="!hasPermission('truck:batch')" class="permission-copy">
@@ -338,7 +344,9 @@ onMounted(async () => {
       <strong>Permission layering</strong>
       <p>Route access is limited to `admin` via router meta.</p>
       <p>Batch buttons are controlled separately through operation permissions.</p>
-      <p>That split is very common in admin systems: page permission first, action permission second.</p>
+      <p>
+        That split is very common in admin systems: page permission first, action permission second.
+      </p>
       <p>Selected rows: {{ selectedRows.length }}</p>
     </div>
   </section>
