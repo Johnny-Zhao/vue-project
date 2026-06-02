@@ -36,7 +36,7 @@ const queryFields: FormFieldSchema[] = [
   {
     key: 'tractorLicensePlateNo',
     label: 'Tractor Plate',
-    type: 'input',
+    type: 'input2',
     defaultValue: '',
   },
   {
