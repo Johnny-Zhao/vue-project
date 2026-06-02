@@ -29,14 +29,14 @@ const queryFields: FormFieldSchema[] = [
   {
     key: 'truckType',
     label: 'Truck Type',
-    type: 'select1',
+    type: 'select',
     options: truckTypeOptions,
     defaultValue: '',
   },
   {
     key: 'tractorLicensePlateNo',
     label: 'Tractor Plate',
-    type: 'input2',
+    type: 'input',
     defaultValue: '',
   },
   {
