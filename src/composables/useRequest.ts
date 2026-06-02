@@ -1,8 +1,5 @@
 import { ref } from 'vue'
 
-// 一个通用请求 hooks。
-// TData 表示成功后拿到的数据类型。
-// TArgs 表示这个请求函数接收的参数列表类型。
 export function useRequest<TData, TArgs extends unknown[]>(
   requestFn: (...args: TArgs) => Promise<TData>,
 ) {

@@ -1,40 +1,83 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/features/auth/store'
+import { matchesPermissions, matchesRole } from '@/features/auth/permissions'
 import { useTaskStore } from '@/features/task/store'
 
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 const taskStore = useTaskStore()
+
+const { user } = storeToRefs(authStore)
 const { pendingCount, completionRate } = storeToRefs(taskStore)
+
+const showShell = computed(() => route.name !== 'login')
+
+const navigationItems = computed(() =>
+  router
+    .getRoutes()
+    .filter((item) => item.meta.menu)
+    .filter(
+      (item) =>
+        matchesRole(authStore.role, item.meta.roles) &&
+        matchesPermissions(authStore.permissions, item.meta.permissions),
+    )
+    .sort((left, right) => (Number(left.meta.menuOrder) || 0) - (Number(right.meta.menuOrder) || 0))
+    .map((item) => ({
+      name: item.name,
+      path: item.path,
+      title: item.meta.title ?? String(item.name ?? item.path),
+    })),
+)
+
+async function handleLogout() {
+  authStore.logout()
+  await router.replace({ name: 'login' })
+}
 </script>
 
 <template>
-  <div class="app-shell">
+  <RouterView v-if="!showShell" />
+
+  <div v-else class="app-shell">
     <header class="shell-header">
       <div>
-        <p class="eyebrow">Vue 3 + TypeScript + Pinia</p>
-        <h1>前端转型学习面板</h1>
+        <p class="eyebrow">Vue 3 + TypeScript + Auth</p>
+        <h1>Engineering Demo Console</h1>
         <p class="subtitle">
-          这个小例子把路由、全局状态、组件数据展示串在一起，比默认模板更接近真实业务页面。
+          This app wires request handling, authentication, routing, and state together like a small admin system.
         </p>
       </div>
 
-      <div class="header-stats">
-        <div class="stat-chip">
-          <span>待推进</span>
-          <strong>{{ pendingCount }}</strong>
+      <div class="header-side">
+        <div class="header-stats">
+          <div class="stat-chip">
+            <span>Pending Tasks</span>
+            <strong>{{ pendingCount }}</strong>
+          </div>
+          <div class="stat-chip">
+            <span>Completion</span>
+            <strong>{{ completionRate }}%</strong>
+          </div>
         </div>
-        <div class="stat-chip">
-          <span>完成率</span>
-          <strong>{{ completionRate }}%</strong>
+
+        <div class="account-panel">
+          <div class="account-copy">
+            <span>{{ user?.name ?? 'Guest' }}</span>
+            <small>{{ authStore.role ?? 'guest' }}</small>
+          </div>
+          <button type="button" @click="handleLogout">Sign Out</button>
         </div>
       </div>
     </header>
 
     <nav class="main-nav">
-      <RouterLink to="/">学习看板</RouterLink>
-      <RouterLink to="/about">TS / Pinia 说明</RouterLink>
-      <RouterLink to="/task-create">创建任务</RouterLink>
-      <RouterLink to="/truck-list">真实接口表格</RouterLink>
+      <RouterLink v-for="item in navigationItems" :key="String(item.name)" :to="item.path">
+        {{ item.title }}
+      </RouterLink>
     </nav>
 
     <RouterView />
@@ -81,11 +124,17 @@ const { pendingCount, completionRate } = storeToRefs(taskStore)
   color: rgba(248, 243, 235, 0.84);
 }
 
+.header-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 320px;
+}
+
 .header-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(120px, 1fr));
   gap: 1rem;
-  min-width: 260px;
 }
 
 .stat-chip {
@@ -106,6 +155,37 @@ const { pendingCount, completionRate } = storeToRefs(taskStore)
   margin-top: 0.25rem;
   font-size: 1.8rem;
   font-weight: 700;
+}
+
+.account-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.account-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.account-copy small {
+  color: rgba(248, 243, 235, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.account-panel button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: #f4e7d2;
+  color: #173937;
+  cursor: pointer;
 }
 
 .main-nav {
@@ -132,8 +212,14 @@ const { pendingCount, completionRate } = storeToRefs(taskStore)
     flex-direction: column;
   }
 
+  .header-side,
   .header-stats {
     min-width: 100%;
+  }
+
+  .account-panel {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

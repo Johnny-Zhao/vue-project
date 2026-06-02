@@ -70,7 +70,7 @@ export const useTaskStore = defineStore('careerPlan', () => {
     loading.value = true
     try {
       const response = await fetchTaskListApi()
-      tasks.value = response.data.list
+      tasks.value = response.list
     } finally {
       loading.value = false
     }
@@ -78,7 +78,7 @@ export const useTaskStore = defineStore('careerPlan', () => {
 
   async function addTask(taskItem: CreateTaskForm) {
     const response = await createTaskApi(taskItem)
-    tasks.value.push(response.data)
+    tasks.value.push(response)
   }
 
   async function updateTask(taskId: number, taskItem: CreateTaskForm) {
@@ -88,7 +88,7 @@ export const useTaskStore = defineStore('careerPlan', () => {
       return
     }
 
-    Object.assign(targetTask, response.data)
+    Object.assign(targetTask, response)
   }
 
   async function updateTaskStatus(taskId: number, status: StudyStatus) {

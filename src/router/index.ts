@@ -1,33 +1,51 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import { readStoredSession } from '@/features/auth/session'
+import { getRolePermissions, matchesPermissions, matchesRole } from '@/features/auth/permissions'
+import { authRoutes } from './modules/auth'
+import { systemRoutes } from './modules/system'
+import { taskRoutes } from './modules/task'
+import { truckRoutes } from './modules/truck'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
+  routes: [...authRoutes, ...taskRoutes, ...systemRoutes, ...truckRoutes],
+})
+
+router.beforeEach((to) => {
+  const session = readStoredSession()
+  const isAuthenticated = Boolean(session)
+  const requiresAuth = to.meta.requiresAuth !== false
+  const userRole = session?.user.role
+  const userPermissions = getRolePermissions(userRole)
+
+  if (requiresAuth && !isAuthenticated) {
+    return {
+      name: 'login',
+      query: {
+        redirect: to.fullPath,
+      },
+    }
+  }
+
+  if (to.meta.publicOnly && isAuthenticated) {
+    return {
       name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
-    },
-    {
-      path: '/task-create',
-      name: 'taskCreate',
-      component: () => import('@/views/TaskCreateView.vue')
-    },
-    {
-      path: '/truck-list',
-      name: 'truckList',
-      component: () => import('@/views/TruckListView.vue')
-    },
-  ],
+    }
+  }
+
+  if (
+    isAuthenticated &&
+    (!matchesRole(userRole, to.meta.roles) || !matchesPermissions(userPermissions, to.meta.permissions))
+  ) {
+    return {
+      name: 'forbidden',
+      query: {
+        from: to.fullPath,
+      },
+    }
+  }
+
+  return true
 })
 
 export default router

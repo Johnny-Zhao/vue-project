@@ -9,8 +9,8 @@ interface UseTaskFormOptions {
   show?: Ref<boolean>
   mode: Ref<DialogMode>
   taskId?: Ref<number | null>
-  close?: () => void | Promise<void>
-  onSubmitted?: () => void | Promise<void>
+  close?: () => void | Promise<void> | Promise<unknown>
+  onSubmitted?: () => void | Promise<void> | Promise<unknown>
 }
 
 export function createDefaultTaskFormData(): CreateTaskForm {

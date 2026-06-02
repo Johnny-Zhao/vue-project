@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { usePermission } from '@/features/auth/usePermission'
 import TaskDialog from '@/features/task/components/TaskDialog.vue'
 import { useTaskBoard } from '@/features/task/composables/useTaskBoard'
+
+const { role, hasPermission } = usePermission()
 
 const {
   activeFilter,
@@ -35,23 +39,27 @@ const {
   handleDialogEdit,
   handleTaskDelete,
 } = useTaskBoard()
+
+const canCreateTask = computed(() => hasPermission('task:create'))
+const canEditTask = computed(() => hasPermission('task:edit'))
+const isViewerMode = computed(() => role.value === 'viewer')
 </script>
 
 <template>
   <main class="dashboard">
     <section class="hero-card">
       <div>
-        <p class="section-label">本周目标</p>
-        <h2>先把 TypeScript 学成一门能落到项目里的语言</h2>
+        <p class="section-label">Weekly Focus</p>
+        <h2>Turn a TypeScript practice board into a permission-aware admin page.</h2>
         <p class="hero-copy">
-          这页现在把筛选、排序、查询、分页、弹框表单都拆成了组合式逻辑。你也可以把删除动作看成一个完整的小闭环：
-          Pinia action、确认弹框、列表更新。
+          This page demonstrates how route access, menu visibility, and page-level actions can all
+          respond to the current role.
         </p>
       </div>
 
       <div class="focus-box">
-        <span>本周专注时长</span>
-        <strong>{{ weeklyFocusHours }} 小时</strong>
+        <span>Weekly Focus Hours</span>
+        <strong>{{ weeklyFocusHours }}h</strong>
         <div class="focus-actions">
           <button type="button" @click="addWeeklyFocusHours(-1)">-1h</button>
           <button type="button" @click="addWeeklyFocusHours(1)">+1h</button>
@@ -60,7 +68,8 @@ const {
     </section>
 
     <div class="toolbar">
-      <el-button type="primary" @click="handleDialogOpen">新增任务</el-button>
+      <el-button v-permission="'task:create'" type="primary" @click="handleDialogOpen">Create Task</el-button>
+      <div v-if="!canCreateTask" class="permission-note">Viewer role can browse tasks but cannot create or edit them.</div>
     </div>
 
     <section class="summary-grid">
@@ -75,8 +84,8 @@ const {
       <article class="panel">
         <div class="panel-header">
           <div>
-            <p class="section-label">任务列表</p>
-            <h3>Pinia 状态驱动的学习任务</h3>
+            <p class="section-label">Task Board</p>
+            <h3>Shared task state with visible permission differences</h3>
           </div>
 
           <div class="filter-group">
@@ -94,17 +103,17 @@ const {
 
         <div class="control-bar">
           <div class="search-box">
-            <span>关键字查询</span>
+            <span>Search keyword</span>
             <el-input
               v-model="keyword"
               clearable
-              placeholder="按任务名称、描述、分类查询"
+              placeholder="Search by title, summary, or category"
             />
           </div>
 
           <div class="sort-bar">
             <div class="sort-item">
-              <span>排序字段</span>
+              <span>Sort field</span>
               <el-select v-model="sortField" class="sort-select">
                 <el-option
                   v-for="item in sortFieldOptions"
@@ -116,7 +125,7 @@ const {
             </div>
 
             <div class="sort-item">
-              <span>排序方向</span>
+              <span>Sort direction</span>
               <el-select v-model="sortDirection" class="sort-select">
                 <el-option
                   v-for="item in sortDirectionOptions"
@@ -130,18 +139,19 @@ const {
         </div>
 
         <div class="meta-line">
-          <span>当前查询：{{ normalizedKeyword || '无' }}</span>
-          <span>筛选后总数：{{ searchedTasks.length }}</span>
+          <span>Current keyword: {{ normalizedKeyword || 'None' }}</span>
+          <span>Visible tasks: {{ searchedTasks.length }}</span>
         </div>
 
-        <div v-if="loading" class="loading-text">正在加载任务列表...</div>
+        <div v-if="loading" class="loading-text">Loading tasks...</div>
 
         <ul class="task-list">
           <li
             v-for="task in pagedItems"
             :key="task.id"
             class="task-card"
-            @click="handleDialogEdit(task.id)"
+            :class="{ readonly: !canEditTask }"
+            @click="canEditTask && handleDialogEdit(task.id)"
           >
             <div class="task-main">
               <div class="task-meta">
@@ -159,12 +169,19 @@ const {
               <span class="hours">{{ task.estimateHours }}h</span>
 
               <div class="status-actions">
-                <button type="button" @click.stop="markTask(task.id, 'todo')">待开始</button>
-                <button type="button" @click.stop="markTask(task.id, 'doing')">进行中</button>
-                <button type="button" @click.stop="markTask(task.id, 'done')">已完成</button>
-                <button class="danger-button" type="button" @click.stop="handleTaskDelete(task.id)">
-                  删除
+                <button v-permission="'task:status:update'" type="button" @click.stop="markTask(task.id, 'todo')">
+                  Mark Todo
                 </button>
+                <button v-permission="'task:status:update'" type="button" @click.stop="markTask(task.id, 'doing')">
+                  Mark Doing
+                </button>
+                <button v-permission="'task:status:update'" type="button" @click.stop="markTask(task.id, 'done')">
+                  Mark Done
+                </button>
+                <button v-permission="'task:delete'" class="danger-button" type="button" @click.stop="handleTaskDelete(task.id)">
+                  Delete
+                </button>
+                <span v-if="isViewerMode" class="readonly-tip">Read-only role</span>
               </div>
             </div>
           </li>
@@ -185,28 +202,28 @@ const {
 
       <aside class="panel side-panel">
         <div>
-          <p class="section-label">学习观察</p>
-          <h3>这页里能看到的 TS / Vue3 点</h3>
+          <p class="section-label">Permission Notes</p>
+          <h3>What this page is proving</h3>
         </div>
 
         <ul class="insight-list">
-          <li>`deleteTask(taskId: number)` 是最基础但很真实的 Pinia action。</li>
-          <li>`handleTaskDelete()` 把确认弹框和 store 删除动作连起来，这就是页面层逻辑。</li>
-          <li>删除按钮用了 `@click.stop`，避免触发整卡的编辑逻辑。</li>
-          <li>删除后分页会自动联动，因为页码逻辑已经被抽到 `usePagination()` 里了。</li>
+          <li>`admin` can see task creation, editing, status updates, and delete actions.</li>
+          <li>`viewer` can still access shared summary data but only in read-only mode.</li>
+          <li>Route protection controls entry, while button visibility controls fine-grained actions.</li>
+          <li>This mirrors a common admin permission split between menu rights and operation rights.</li>
         </ul>
 
         <div class="mini-stats">
           <div>
-            <span>进行中</span>
+            <span>Doing</span>
             <strong>{{ doingCount }}</strong>
           </div>
           <div>
-            <span>待开始</span>
+            <span>Todo</span>
             <strong>{{ pendingCount }}</strong>
           </div>
           <div>
-            <span>已完成</span>
+            <span>Done</span>
             <strong>{{ completedCount }}</strong>
           </div>
         </div>
@@ -214,7 +231,7 @@ const {
     </section>
   </main>
 
-  <TaskDialog v-model:show="dialogVisible" :mode="dialogMode" :task-id="dialogTaskId" />
+  <TaskDialog v-if="canCreateTask || canEditTask" v-model:show="dialogVisible" :mode="dialogMode" :task-id="dialogTaskId" />
 </template>
 
 <style scoped>
@@ -307,6 +324,13 @@ const {
 .toolbar {
   display: flex;
   justify-content: flex-end;
+}
+
+.permission-note {
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: #efe5d1;
+  color: #7a5d2d;
 }
 
 .summary-grid {
@@ -440,6 +464,10 @@ const {
   cursor: pointer;
 }
 
+.task-card.readonly {
+  cursor: default;
+}
+
 .task-main h4 {
   margin-top: 0.5rem;
   color: #193735;
@@ -540,6 +568,17 @@ const {
 .danger-button {
   background: #fde7e2;
   color: #b6422a;
+}
+
+.readonly-tip {
+  display: inline-flex;
+  justify-content: center;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  background: #efe5d1;
+  color: #7a5d2d;
+  font-size: 0.85rem;
 }
 
 .pagination-wrap {

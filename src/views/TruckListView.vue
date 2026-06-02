@@ -1,72 +1,266 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { fetchTruckListApi } from '@/api/truck'
+import CrudTable from '@/components/CrudTable.vue'
+import QueryFilterForm from '@/components/QueryFilterForm.vue'
+import type {
+  FormFieldSchema,
+  FormModel,
+  TableBatchAction,
+  TableColumnSchema,
+  TablePagination,
+} from '@/components/formSchemas'
+import { createModelFromFields } from '@/components/formSchemas'
 import { useRequest } from '@/composables/useRequest'
+import { usePermission } from '@/features/auth/usePermission'
 import type { TruckItem, TruckListQuery } from '@/types/truck'
 
-function createDefaultQuery(): TruckListQuery {
-  return {
-    truckType: '',
-    tractorLicensePlateNo: '',
-    trailerLicensePlateNo: '',
-    pageIndex: 0,
-    pageSize: 50,
-    isDriverLicenseExpire: false,
-    isVehicleLicenseExpire: false,
-    isBusinessExpire: false,
-    isCompulsoryExpire: false,
-  }
-}
+type TableLikeTruckRow = TruckItem & Record<string, unknown>
 
-const queryForm = reactive<TruckListQuery>(createDefaultQuery())
+const { hasPermission } = usePermission()
 
-const truckTypeOptions: Array<{ label: string; value: TruckListQuery['truckType'] }> = [
+const truckTypeOptions = [
   { label: 'All Types', value: '' },
   { label: 'Type 1', value: 1 },
   { label: 'Type 2', value: 2 },
 ]
 
+const queryFields: FormFieldSchema[] = [
+  {
+    key: 'truckType',
+    label: 'Truck Type',
+    type: 'select',
+    options: truckTypeOptions,
+    defaultValue: '',
+  },
+  {
+    key: 'tractorLicensePlateNo',
+    label: 'Tractor Plate',
+    type: 'input',
+    defaultValue: '',
+  },
+  {
+    key: 'trailerLicensePlateNo',
+    label: 'Trailer Plate',
+    type: 'input',
+    defaultValue: '',
+  },
+  {
+    key: 'isDriverLicenseExpire',
+    label: 'Driver License Expired',
+    type: 'switch',
+    defaultValue: false,
+  },
+  {
+    key: 'isVehicleLicenseExpire',
+    label: 'Vehicle License Expired',
+    type: 'switch',
+    defaultValue: false,
+  },
+  {
+    key: 'isBusinessExpire',
+    label: 'Business License Expired',
+    type: 'switch',
+    defaultValue: false,
+  },
+  {
+    key: 'isCompulsoryExpire',
+    label: 'Compulsory Insurance Expired',
+    type: 'switch',
+    defaultValue: false,
+  },
+]
+
+const queryModel = ref<FormModel>(
+  createModelFromFields(queryFields, {
+    truckType: '',
+    tractorLicensePlateNo: '',
+    trailerLicensePlateNo: '',
+    isDriverLicenseExpire: false,
+    isVehicleLicenseExpire: false,
+    isBusinessExpire: false,
+    isCompulsoryExpire: false,
+  }),
+)
+
+const pagination = reactive<TablePagination>({
+  currentPage: 1,
+  pageSize: 50,
+  total: 0,
+  pageSizes: [20, 50, 100],
+})
+
+const sortState = reactive<{
+  prop: string | null
+  order: 'ascending' | 'descending' | null
+}>({
+  prop: null,
+  order: null,
+})
+
+const selectedRows = ref<TableLikeTruckRow[]>([])
+
+const columns: TableColumnSchema<TableLikeTruckRow>[] = [
+  {
+    key: 'index',
+    label: '#',
+    width: 72,
+    formatter: (_row, index) => (pagination.currentPage - 1) * pagination.pageSize + index + 1,
+  },
+  {
+    key: 'tractorLicensePlateNo',
+    label: 'Tractor Plate',
+    prop: 'tractorLicensePlateNo',
+    minWidth: 150,
+    sortable: 'custom',
+  },
+  {
+    key: 'trailerLicensePlateNo',
+    label: 'Trailer Plate',
+    prop: 'trailerLicensePlateNo',
+    minWidth: 150,
+  },
+  {
+    key: 'truckType',
+    label: 'Truck Type',
+    prop: 'truckType',
+    width: 120,
+    sortable: 'custom',
+    formatter: (row) => formatTruckType(row.truckType),
+  },
+  {
+    key: 'truckModel',
+    label: 'Model',
+    prop: 'truckModel',
+    width: 120,
+  },
+  {
+    key: 'whiteTruckFlag',
+    label: 'White List',
+    prop: 'whiteTruckFlag',
+    width: 96,
+    formatter: (row) => formatYesNo(row.whiteTruckFlag),
+  },
+  {
+    key: 'powerType',
+    label: 'Power Type',
+    prop: 'powerType',
+    width: 110,
+  },
+  {
+    key: 'modifyPersonName',
+    label: 'Updated By',
+    prop: 'modifyPersonName',
+    width: 140,
+  },
+  {
+    key: 'modifyTime',
+    label: 'Updated At',
+    prop: 'modifyTime',
+    minWidth: 170,
+  },
+]
+
+const batchActions = computed<TableBatchAction<TableLikeTruckRow>[]>(() =>
+  hasPermission('truck:batch')
+    ? [
+        {
+          key: 'export',
+          label: 'Batch Export',
+          type: 'primary',
+        },
+        {
+          key: 'tag',
+          label: 'Batch Tag',
+          type: 'success',
+        },
+      ]
+    : [],
+)
+
 const { data, loading, error, run, clearError } = useRequest(fetchTruckListApi)
 
-const tableRows = computed<TruckItem[]>(() => data.value?.list ?? [])
-const total = computed(() => data.value?.total ?? 0)
+const tableRows = computed<TableLikeTruckRow[]>(() => {
+  const rows = (data.value?.list ?? []) as TableLikeTruckRow[]
 
-const currentPage = computed({
-  get: () => queryForm.pageIndex + 1,
-  set: (nextPage: number) => {
-    queryForm.pageIndex = Math.max(0, nextPage - 1)
-  },
+  if (!sortState.prop || !sortState.order) {
+    return rows
+  }
+
+  const direction = sortState.order === 'ascending' ? 1 : -1
+  const sortedRows = [...rows]
+
+  sortedRows.sort((left, right) => {
+    const leftValue = left[sortState.prop as keyof TruckItem]
+    const rightValue = right[sortState.prop as keyof TruckItem]
+
+    return String(leftValue ?? '').localeCompare(String(rightValue ?? '')) * direction
+  })
+
+  return sortedRows
 })
+
+function createRequestPayload(): TruckListQuery {
+  return {
+    truckType: (queryModel.value.truckType as TruckListQuery['truckType']) ?? '',
+    tractorLicensePlateNo: String(queryModel.value.tractorLicensePlateNo ?? ''),
+    trailerLicensePlateNo: String(queryModel.value.trailerLicensePlateNo ?? ''),
+    pageIndex: pagination.currentPage - 1,
+    pageSize: pagination.pageSize,
+    isDriverLicenseExpire: Boolean(queryModel.value.isDriverLicenseExpire),
+    isVehicleLicenseExpire: Boolean(queryModel.value.isVehicleLicenseExpire),
+    isBusinessExpire: Boolean(queryModel.value.isBusinessExpire),
+    isCompulsoryExpire: Boolean(queryModel.value.isCompulsoryExpire),
+  }
+}
 
 async function loadTruckList() {
   try {
     clearError()
-    await run({ ...queryForm })
+    const response = await run(createRequestPayload())
+    pagination.total = response.total
   } catch {
-    ElMessage.error('Failed to load truck list. Check API and proxy config.')
+    // The request layer already handles unified error feedback.
   }
 }
 
 async function handleSearch() {
-  queryForm.pageIndex = 0
+  pagination.currentPage = 1
   await loadTruckList()
 }
 
 async function handleReset() {
-  Object.assign(queryForm, createDefaultQuery())
+  pagination.currentPage = 1
+  sortState.prop = null
+  sortState.order = null
   await loadTruckList()
 }
 
-async function handleCurrentChange(page: number) {
-  currentPage.value = page
+async function handlePageChange(page: number) {
+  pagination.currentPage = page
   await loadTruckList()
 }
 
 async function handleSizeChange(size: number) {
-  queryForm.pageSize = size
-  queryForm.pageIndex = 0
+  pagination.pageSize = size
+  pagination.currentPage = 1
   await loadTruckList()
+}
+
+function handleSelectionChange(rows: Record<string, unknown>[]) {
+  selectedRows.value = rows as TableLikeTruckRow[]
+}
+
+function handleSortChange(payload: { prop: string | null; order: 'ascending' | 'descending' | null }) {
+  sortState.prop = payload.prop
+  sortState.order = payload.order
+}
+
+function handleBatchAction(payload: { actionKey: string; rows: Record<string, unknown>[] }) {
+  console.log('batch action', {
+    actionKey: payload.actionKey,
+    rows: payload.rows as TableLikeTruckRow[],
+  })
 }
 
 function formatTruckType(truckType: TruckItem['truckType']) {
@@ -85,18 +279,6 @@ function formatYesNo(value: number | null) {
   return value === 1 ? 'Yes' : 'No'
 }
 
-function formatText(value: string | number | null) {
-  if (value === null || value === '') {
-    return '-'
-  }
-
-  return String(value)
-}
-
-function getRowIndex(index: number) {
-  return queryForm.pageIndex * queryForm.pageSize + index + 1
-}
-
 onMounted(async () => {
   await loadTruckList()
 })
@@ -106,130 +288,59 @@ onMounted(async () => {
   <section class="truck-page">
     <div class="page-head">
       <div>
-        <p class="eyebrow">Real API Demo</p>
+        <p class="eyebrow">Protected Module</p>
         <h2>Truck List Practice</h2>
         <p class="intro">
-          This page connects a real API with a query form, table, and pagination.
+          This page is restricted to the admin role at the route level. Batch operations are also
+          hidden behind page-level permissions.
+        </p>
+        <p v-permission="{ permissions: 'truck:batch' }" class="permission-copy permission-copy-granted">
+          Batch actions are available for this role.
+        </p>
+        <p v-if="!hasPermission('truck:batch')" class="permission-copy">
+          Current role can view truck records, but batch actions are hidden by permission.
         </p>
       </div>
 
       <div class="head-card">
         <span>Total Records</span>
-        <strong>{{ total }}</strong>
-        <small>Directly driven by backend total</small>
+        <strong>{{ pagination.total }}</strong>
+        <small>Driven by backend pagination data</small>
       </div>
     </div>
 
-    <article class="query-panel">
-      <div class="panel-head">
-        <div>
-          <p class="panel-label">Query Form</p>
-          <h3>Keep request params aligned with page state</h3>
-        </div>
-      </div>
+    <QueryFilterForm
+      v-model="queryModel"
+      :fields="queryFields"
+      :loading="loading"
+      submit-text="Search"
+      reset-text="Reset"
+      @search="handleSearch"
+      @reset="handleReset"
+    />
 
-      <el-form :model="queryForm" label-position="top" class="query-form">
-        <div class="form-grid">
-          <el-form-item label="Truck Type">
-            <el-select v-model="queryForm.truckType" placeholder="Select truck type" clearable>
-              <el-option v-for="item in truckTypeOptions" :key="String(item.value)" :label="item.label"
-                :value="item.value" />
-            </el-select>
-          </el-form-item>
+    <div v-if="error" class="error-banner">{{ error }}</div>
 
-          <el-form-item label="Tractor Plate">
-            <el-input v-model="queryForm.tractorLicensePlateNo" placeholder="Enter tractor plate" clearable />
-          </el-form-item>
+    <CrudTable
+      :rows="tableRows"
+      :columns="columns"
+      :loading="loading"
+      :pagination="pagination"
+      :batch-actions="batchActions"
+      @selection-change="handleSelectionChange"
+      @sort-change="handleSortChange"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+      @batch-action="handleBatchAction"
+    />
 
-          <el-form-item label="Trailer Plate">
-            <el-input v-model="queryForm.trailerLicensePlateNo" placeholder="Enter trailer plate" clearable />
-          </el-form-item>
-        </div>
-
-        <div class="switch-grid">
-          <el-checkbox v-model="queryForm.isDriverLicenseExpire">Driver License Expired</el-checkbox>
-          <el-checkbox v-model="queryForm.isVehicleLicenseExpire">Vehicle License Expired</el-checkbox>
-          <el-checkbox v-model="queryForm.isBusinessExpire">Business License Expired</el-checkbox>
-          <el-checkbox v-model="queryForm.isCompulsoryExpire">Compulsory Insurance Expired</el-checkbox>
-        </div>
-
-        <div class="actions">
-          <el-button @click="handleReset">Reset</el-button>
-          <el-button type="primary" :loading="loading" @click="handleSearch">Search</el-button>
-        </div>
-      </el-form>
-    </article>
-    <article class="table-panel">
-      <div class="panel-head">
-        <div>
-          <p class="panel-label">Table Result</p>
-          <h3>Drive the table with real backend data</h3>
-        </div>
-        <p class="error-text" v-if="error">{{ error }}</p>
-      </div>
-
-      <el-table :data="tableRows" border stripe v-loading="loading" class="truck-table">
-        <el-table-column label="#" width="72">
-          <template #default="{ $index }">
-            {{ getRowIndex($index) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="tractorLicensePlateNo" label="Tractor Plate" min-width="150">
-          <template #default="{ row }">
-            {{ formatText(row.tractorLicensePlateNo) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="trailerLicensePlateNo" label="Trailer Plate" min-width="150">
-          <template #default="{ row }">
-            {{ formatText(row.trailerLicensePlateNo) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="truckType" label="Truck Type" width="110">
-          <template #default="{ row }">
-            {{ formatTruckType(row.truckType) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="truckModel" label="Model" width="120">
-          <template #default="{ row }">
-            {{ formatText(row.truckModel) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="whiteTruckFlag" label="White List" width="90">
-          <template #default="{ row }">
-            {{ formatYesNo(row.whiteTruckFlag) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="powerType" label="Power Type" width="100">
-          <template #default="{ row }">
-            {{ formatText(row.powerType) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="modifyPersonName" label="Updated By" width="120">
-          <template #default="{ row }">
-            {{ formatText(row.modifyPersonName) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="modifyTime" label="Updated At" min-width="170">
-          <template #default="{ row }">
-            {{ formatText(row.modifyTime) }}
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pagination-wrap">
-        <el-pagination v-model:current-page="currentPage" v-model:page-size="queryForm.pageSize"
-          :page-sizes="[20, 50, 100]" layout="total, sizes, prev, pager, next" :total="total"
-          @current-change="handleCurrentChange" @size-change="handleSizeChange" />
-      </div>
-    </article>
+    <div class="page-note">
+      <strong>Permission layering</strong>
+      <p>Route access is limited to `admin` via router meta.</p>
+      <p>Batch buttons are controlled separately through operation permissions.</p>
+      <p>That split is very common in admin systems: page permission first, action permission second.</p>
+      <p>Selected rows: {{ selectedRows.length }}</p>
+    </div>
   </section>
 </template>
 
@@ -241,8 +352,7 @@ onMounted(async () => {
 }
 
 .page-head,
-.query-panel,
-.table-panel {
+.page-note {
   padding: 1.5rem;
   border-radius: 28px;
   border: 1px solid rgba(29, 59, 54, 0.1);
@@ -256,8 +366,7 @@ onMounted(async () => {
   gap: 1rem;
 }
 
-.eyebrow,
-.panel-label {
+.eyebrow {
   color: #7a5d2d;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -265,8 +374,7 @@ onMounted(async () => {
   font-weight: 700;
 }
 
-.page-head h2,
-.panel-head h3 {
+.page-head h2 {
   margin-top: 0.4rem;
   color: #173937;
   font-size: 1.7rem;
@@ -277,6 +385,15 @@ onMounted(async () => {
   max-width: 42rem;
   margin-top: 0.75rem;
   color: #556260;
+}
+
+.permission-copy {
+  margin-top: 0.75rem;
+  color: #7a5d2d;
+}
+
+.permission-copy-granted {
+  color: #1a6c45;
 }
 
 .head-card {
@@ -300,65 +417,27 @@ onMounted(async () => {
   font-weight: 700;
 }
 
-.panel-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.query-form {
-  margin-top: 1rem;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.switch-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem 1.5rem;
-  margin-top: 0.5rem;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.error-text {
+.error-banner {
+  padding: 1rem 1.25rem;
+  border-radius: 18px;
+  background: rgba(245, 108, 108, 0.12);
   color: #c45656;
+  border: 1px solid rgba(245, 108, 108, 0.18);
 }
 
-.truck-table {
-  margin-top: 1rem;
+.page-note {
+  color: #5b6663;
 }
 
-.pagination-wrap {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
+.page-note strong {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #173937;
 }
 
 @media (max-width: 960px) {
-
-  .page-head,
-  .form-grid {
+  .page-head {
     grid-template-columns: 1fr;
-  }
-
-  .panel-head,
-  .actions {
-    flex-direction: column;
-  }
-
-  .pagination-wrap {
-    justify-content: stretch;
   }
 }
 </style>

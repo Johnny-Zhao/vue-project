@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:test": "vite --mode test",
+    "dev:prod": "vite --mode production",
     "build": "run-p type-check \"build-only {@}\" --",
+    "build:test": "run-p type-check \"build-only --mode test\" --",
+    "build:prod": "run-p type-check \"build-only --mode production\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
@@ -17,6 +21,7 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "axios": "^1.13.1",
     "element-plus": "^2.14.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
@@ -40,6 +45,7 @@
     "eslint-plugin-vue": "~10.8.0",
     "jiti": "^2.6.1",
     "jsdom": "^29.0.2",
+    "less": "^4.4.2",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.60.0",
     "prettier": "3.8.3",

@@ -1,49 +1,56 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import TaskFormFields from '@/features/task/components/TaskFormFields.vue'
+import EntityForm from '@/components/EntityForm.vue'
+import type { FormModel } from '@/components/formSchemas'
 import { useTaskForm } from '@/features/task/composables/useTaskForm'
+import { createTaskFormFields } from '@/features/task/formSchema'
 import type { DialogMode } from '@/features/task/types'
 
 const router = useRouter()
 const mode = computed<DialogMode>(() => 'create')
+const taskFields = createTaskFormFields()
 
 const {
-  categoryOptions,
-  statusOptions,
-  priorityOptions,
-  formRef,
   formData,
-  formRules,
+  dialogTitle,
+  submitButtonText,
   submitting,
   handleSubmit,
 } = useTaskForm({
   mode,
   close: () => router.push('/'),
 })
+
+function handleEntitySubmit(model: FormModel) {
+  Object.assign(formData, model)
+  void handleSubmit()
+}
 </script>
 
 <template>
   <section class="create-page">
     <div class="page-head">
       <p class="eyebrow">Task Create</p>
-      <h2>新增学习任务</h2>
-      <p class="intro">创建页和弹窗现在复用同一套表单定义，后续加字段只需要改一处。</p>
+      <h2>{{ dialogTitle }}</h2>
+      <p class="intro">
+        This page now uses the same schema-driven task form building blocks as the dialog flow, so
+        future field changes stay in one place.
+      </p>
     </div>
 
-    <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top" class="task-form">
-      <TaskFormFields
-        v-model="formData"
-        :category-options="categoryOptions"
-        :status-options="statusOptions"
-        :priority-options="priorityOptions"
-      />
-
-      <div class="actions">
-        <el-button @click="router.push('/')">返回列表</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">创建任务</el-button>
-      </div>
-    </el-form>
+    <EntityForm
+      v-model="formData"
+      class="task-form"
+      :fields="taskFields"
+      :initial-value="formData"
+      :loading="submitting"
+      :columns="2"
+      :submit-text="submitButtonText"
+      cancel-text="Back to Board"
+      @submit="handleEntitySubmit"
+      @cancel="router.push('/')"
+    />
   </section>
 </template>
 
@@ -82,17 +89,5 @@ const {
 
 .task-form {
   margin-top: 0.25rem;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-@media (max-width: 768px) {
-  .actions {
-    justify-content: stretch;
-  }
 }
 </style>
