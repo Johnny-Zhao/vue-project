@@ -18,6 +18,16 @@ function parseTaskId(rawId) {
   return id
 }
 
+function parsePositiveInt(value, fallback) {
+  const parsed = Number(value)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return fallback
+  }
+
+  return parsed
+}
+
 export function getTutorialGuide() {
   return {
     title: 'Node + SQLite CRUD 学习页',
@@ -25,7 +35,7 @@ export function getTutorialGuide() {
     flowSteps: [
       '前端页面调用 src/api/tutorialTasks.ts',
       '路由 server/routes/tutorial.routes.js 匹配请求地址',
-      '中间件先补 requestId、日志和请求体校验',
+      '中间件先处理 requestId、日志和请求体校验',
       '控制器只负责收参和返回响应',
       '服务层处理业务规则和错误抛出',
       '仓储层通过 better-sqlite3 直接读写 tutorial.sqlite 文件',
@@ -57,7 +67,7 @@ export function getTutorialGuide() {
       {
         method: 'GET',
         path: '/api/tutorial/tasks',
-        description: '查询任务列表，支持 status / keyword 过滤。',
+        description: '分页查询任务列表，支持 status / keyword 过滤。',
       },
       { method: 'GET', path: '/api/tutorial/tasks/:id', description: '查询单条任务详情。' },
       { method: 'POST', path: '/api/tutorial/tasks', description: '新增一条任务。' },
@@ -77,11 +87,22 @@ export async function listTutorialTasks(filters = {}) {
   const status =
     typeof filters.status === 'string' && filters.status !== 'all' ? filters.status : ''
   const keyword = typeof filters.keyword === 'string' ? filters.keyword.trim().slice(0, 50) : ''
+  const page = parsePositiveInt(filters.page, 1)
+  const pageSize = Math.min(parsePositiveInt(filters.pageSize, 10), 50)
 
-  return listTutorialTaskRecords({
+  const result = await listTutorialTaskRecords({
     status,
     keyword,
+    page,
+    pageSize,
   })
+
+  return {
+    list: result.list,
+    total: result.total,
+    page,
+    pageSize,
+  }
 }
 
 export async function getTutorialTaskDetail(rawId) {

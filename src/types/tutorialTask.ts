@@ -47,4 +47,13 @@ export interface TutorialTaskPayload {
 export interface TutorialTaskQuery {
   status?: string
   keyword?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface TutorialTaskPageResult {
+  list: TutorialTask[]
+  total: number
+  page: number
+  pageSize: number
 }

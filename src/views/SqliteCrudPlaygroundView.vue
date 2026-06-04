@@ -9,7 +9,12 @@ import {
   fetchTutorialTasksApi,
   updateTutorialTaskApi,
 } from '@/api/tutorialTasks'
-import type { TutorialGuide, TutorialTask, TutorialTaskPayload } from '@/types/tutorialTask'
+import type {
+  TutorialGuide,
+  TutorialTask,
+  TutorialTaskPageResult,
+  TutorialTaskPayload,
+} from '@/types/tutorialTask'
 
 const requestError = ref('')
 const loading = ref(false)
@@ -18,10 +23,13 @@ const deletingId = ref<number | null>(null)
 
 const guide = ref<TutorialGuide | null>(null)
 const tasks = ref<TutorialTask[]>([])
+const totalTasks = ref(0)
 const selectedTaskId = ref<number | null>(null)
 
 const keyword = ref('')
 const statusFilter = ref<'all' | 'todo' | 'doing' | 'done'>('all')
+const currentPage = ref(1)
+const pageSize = ref(5)
 
 const defaultForm = (): TutorialTaskPayload => ({
   title: '',
@@ -52,15 +60,36 @@ function resolveErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '请求失败，请稍后重试。'
 }
 
-async function loadTasks() {
+async function applyPageResult(result: TutorialTaskPageResult) {
+  tasks.value = result.list
+  totalTasks.value = result.total
+  currentPage.value = result.page
+  pageSize.value = result.pageSize
+
+  const maxPage = Math.max(1, Math.ceil(result.total / result.pageSize))
+  if (currentPage.value > maxPage) {
+    currentPage.value = maxPage
+    await loadTasks()
+  }
+}
+
+async function loadTasks(options: { resetPage?: boolean } = {}) {
   loading.value = true
   requestError.value = ''
 
   try {
-    tasks.value = await fetchTutorialTasksApi({
+    if (options.resetPage) {
+      currentPage.value = 1
+    }
+
+    const result = await fetchTutorialTasksApi({
       keyword: keyword.value.trim() || undefined,
       status: statusFilter.value === 'all' ? undefined : statusFilter.value,
+      page: currentPage.value,
+      pageSize: pageSize.value,
     })
+
+    await applyPageResult(result)
 
     if (
       selectedTaskId.value != null &&
@@ -118,6 +147,14 @@ async function handleSubmit() {
   }
 }
 
+function tableRowClassName({ row }: { row: TutorialTask }) {
+  return row.id === selectedTaskId.value ? 'task-row-active' : ''
+}
+
+function handleTableRowClick(row: TutorialTask) {
+  void handleSelectTask(row.id)
+}
+
 async function handleDelete(task: TutorialTask) {
   await ElMessageBox.confirm(`确认删除「${task.title}」吗？`, '删除任务', {
     type: 'warning',
@@ -144,6 +181,17 @@ async function handleDelete(task: TutorialTask) {
   }
 }
 
+function handlePageChange(page: number) {
+  currentPage.value = page
+  void loadTasks()
+}
+
+function handlePageSizeChange(size: number) {
+  pageSize.value = size
+  currentPage.value = 1
+  void loadTasks()
+}
+
 async function initializePage() {
   loading.value = true
   requestError.value = ''
@@ -151,10 +199,14 @@ async function initializePage() {
   try {
     const [guideResult, taskResult] = await Promise.all([
       fetchTutorialGuideApi(),
-      fetchTutorialTasksApi(),
+      fetchTutorialTasksApi({
+        page: currentPage.value,
+        pageSize: pageSize.value,
+      }),
     ])
+
     guide.value = guideResult
-    tasks.value = taskResult
+    await applyPageResult(taskResult)
   } catch (error) {
     requestError.value = resolveErrorMessage(error)
   } finally {
@@ -172,7 +224,7 @@ onMounted(() => {
     <header class="page-card hero-card">
       <div>
         <p class="section-label">Node + SQLite</p>
-        <h2>用真实数据库练一遍 Express 增删改查</h2>
+        <h2>用真实数据库走一遍 Express 增删改查</h2>
         <p class="hero-copy">
           这个页面对应一套真实的 SQLite CRUD 接口。你可以一边操作任务，一边对照后端的 `middleware /
           controller / service / repository / database` 分层。
@@ -180,7 +232,9 @@ onMounted(() => {
       </div>
 
       <div class="hero-actions">
-        <el-button :loading="loading" type="primary" @click="loadTasks">刷新任务列表</el-button>
+        <el-button :loading="loading" type="primary" @click="loadTasks({ resetPage: true })">
+          刷新任务列表
+        </el-button>
         <el-button @click="resetForm">切回新增模式</el-button>
       </div>
     </header>
@@ -200,7 +254,7 @@ onMounted(() => {
 
       <article class="page-card panel">
         <p class="section-label">中间件</p>
-        <h3>为什么这几个 middleware 要先走</h3>
+        <h3>为什么这几个 middleware 要先执行</h3>
 
         <ul class="middle-list">
           <li v-for="item in guide.middlewares" :key="item.name">
@@ -253,7 +307,7 @@ onMounted(() => {
               v-model="form.title"
               type="text"
               maxlength="60"
-              placeholder="例如：补充 SQLite CRUD 接口"
+              placeholder="例如：补全 SQLite CRUD 接口"
             />
           </label>
 
@@ -305,6 +359,7 @@ onMounted(() => {
             <p class="section-label">SQLite 任务列表</p>
             <h3>直接请求 `/api/tutorial/tasks`</h3>
           </div>
+          <span class="table-meta">共 {{ totalTasks }} 条</span>
         </div>
 
         <div class="filter-bar">
@@ -315,41 +370,59 @@ onMounted(() => {
             <option value="doing">doing</option>
             <option value="done">done</option>
           </select>
-          <el-button :loading="loading" @click="loadTasks">筛选</el-button>
+          <el-button :loading="loading" @click="loadTasks({ resetPage: true })">筛选</el-button>
         </div>
 
-        <div class="task-list">
-          <button
-            v-for="task in tasks"
-            :key="task.id"
-            type="button"
-            class="task-card"
-            :class="{ active: selectedTaskId === task.id }"
-            @click="handleSelectTask(task.id)"
-          >
-            <div class="task-main">
-              <strong>{{ task.title }}</strong>
-              <span>{{ task.description || '暂无描述' }}</span>
-            </div>
+        <el-table
+          v-loading="loading"
+          class="task-table"
+          :data="tasks"
+          row-key="id"
+          stripe
+          border
+          empty-text="暂无任务"
+          :row-class-name="tableRowClassName"
+          @row-click="handleTableRowClick"
+        >
+          <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip />
+          <el-table-column label="描述" min-width="200" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.description || '暂无描述' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="88" />
+          <el-table-column prop="priority" label="优先级" width="96" />
+          <el-table-column label="负责人" width="120" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.assignee || '未分配' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" @click.stop="handleSelectTask(row.id)">编辑</el-button>
+              <el-button
+                link
+                type="danger"
+                :loading="deletingId === row.id"
+                @click.stop="handleDelete(row)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-            <div class="task-side">
-              <small>{{ task.status }} / {{ task.priority }}</small>
-              <small>{{ task.assignee || '未分配' }}</small>
-              <div class="task-actions">
-                <el-button link type="primary" @click.stop="handleSelectTask(task.id)"
-                  >编辑</el-button
-                >
-                <el-button
-                  link
-                  type="danger"
-                  :loading="deletingId === task.id"
-                  @click.stop="handleDelete(task)"
-                >
-                  删除
-                </el-button>
-              </div>
-            </div>
-          </button>
+        <div class="pagination-wrap">
+          <el-pagination
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :page-sizes="[5, 10, 20]"
+            :total="totalTasks"
+            background
+            layout="total, sizes, prev, pager, next"
+            @current-change="handlePageChange"
+            @size-change="handlePageSizeChange"
+          />
         </div>
       </article>
     </div>
@@ -468,6 +541,11 @@ onMounted(() => {
   gap: 1rem;
 }
 
+.table-meta {
+  color: #6a7472;
+  font-size: 0.9rem;
+}
+
 .form-grid {
   display: grid;
   gap: 0.9rem;
@@ -508,48 +586,23 @@ onMounted(() => {
   margin-top: 1rem;
 }
 
-.task-list {
-  display: grid;
-  gap: 0.85rem;
+.task-table {
   margin-top: 1rem;
+  width: 100%;
 }
 
-.task-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 20px;
-  border: 1px solid rgba(29, 59, 54, 0.1);
-  background: #f6f8f7;
-  text-align: left;
+:deep(.task-table .el-table__row) {
   cursor: pointer;
 }
 
-.task-card.active {
-  border-color: rgba(27, 93, 83, 0.45);
-  box-shadow: inset 0 0 0 1px rgba(27, 93, 83, 0.12);
+:deep(.task-table .task-row-active > td.el-table__cell) {
+  background-color: rgba(27, 93, 83, 0.08) !important;
 }
 
-.task-main,
-.task-side {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.task-main strong {
-  color: #173937;
-}
-
-.task-main span,
-.task-side small {
-  color: #5e6967;
-}
-
-.task-actions {
+.pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 @media (max-width: 1080px) {
@@ -561,6 +614,16 @@ onMounted(() => {
 
   .filter-bar {
     grid-template-columns: 1fr;
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pagination-wrap {
+    justify-content: flex-start;
+    overflow-x: auto;
   }
 }
 </style>

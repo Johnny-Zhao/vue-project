@@ -2,6 +2,7 @@ import { requestApi } from '@/api/request'
 import type {
   TutorialGuide,
   TutorialTask,
+  TutorialTaskPageResult,
   TutorialTaskPayload,
   TutorialTaskQuery,
 } from '@/types/tutorialTask'
@@ -18,13 +19,15 @@ export function fetchTutorialGuideApi() {
 }
 
 export function fetchTutorialTasksApi(params?: TutorialTaskQuery) {
-  return requestApi<TutorialTask[]>({
+  return requestApi<TutorialTaskPageResult>({
     url: '/tutorial/tasks',
     method: 'GET',
     params: params
       ? {
           status: params.status,
           keyword: params.keyword,
+          page: params.page,
+          pageSize: params.pageSize,
         }
       : undefined,
     baseURL: API_BASE_URL,

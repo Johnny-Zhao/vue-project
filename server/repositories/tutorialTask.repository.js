@@ -17,8 +17,7 @@ function mapTaskRow(row) {
   }
 }
 
-export async function listTutorialTasks(filters = {}) {
-  const db = getDatabase()
+function buildTaskQuery(filters = {}) {
   const conditions = []
   const values = []
 
@@ -33,27 +32,54 @@ export async function listTutorialTasks(filters = {}) {
     values.push(keyword, keyword, keyword)
   }
 
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  return {
+    whereClause: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+    values,
+  }
+}
+
+export async function listTutorialTasks(filters = {}) {
+  const db = getDatabase()
+  const { whereClause, values } = buildTaskQuery(filters)
+  const page = Number(filters.page || 1)
+  const pageSize = Number(filters.pageSize || 10)
+  const offset = (page - 1) * pageSize
+
   const rows = db
     .prepare(
       `
-    SELECT
-      id,
-      title,
-      status,
-      priority,
-      assignee,
-      description,
-      created_at AS createdAt,
-      updated_at AS updatedAt
-    FROM tutorial_tasks
-    ${whereClause}
-    ORDER BY updated_at DESC, id DESC;
-  `,
+        SELECT
+          id,
+          title,
+          status,
+          priority,
+          assignee,
+          description,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM tutorial_tasks
+        ${whereClause}
+        ORDER BY updated_at DESC, id DESC
+        LIMIT ?
+        OFFSET ?;
+      `,
     )
-    .all(...values)
+    .all(...values, pageSize, offset)
 
-  return rows.map(mapTaskRow)
+  const countRow = db
+    .prepare(
+      `
+        SELECT COUNT(*) AS count
+        FROM tutorial_tasks
+        ${whereClause};
+      `,
+    )
+    .get(...values)
+
+  return {
+    list: rows.map(mapTaskRow),
+    total: Number(countRow?.count || 0),
+  }
 }
 
 export async function getTutorialTaskById(id) {
@@ -61,19 +87,19 @@ export async function getTutorialTaskById(id) {
   const row = db
     .prepare(
       `
-    SELECT
-      id,
-      title,
-      status,
-      priority,
-      assignee,
-      description,
-      created_at AS createdAt,
-      updated_at AS updatedAt
-    FROM tutorial_tasks
-    WHERE id = ?
-    LIMIT 1;
-  `,
+        SELECT
+          id,
+          title,
+          status,
+          priority,
+          assignee,
+          description,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM tutorial_tasks
+        WHERE id = ?
+        LIMIT 1;
+      `,
     )
     .get(Number(id))
 
@@ -86,9 +112,9 @@ export async function createTutorialTask(payload) {
   const result = db
     .prepare(
       `
-      INSERT INTO tutorial_tasks (title, status, priority, assignee, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `,
+        INSERT INTO tutorial_tasks (title, status, priority, assignee, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
     )
     .run(
       payload.title,
@@ -109,16 +135,16 @@ export async function updateTutorialTask(id, payload) {
 
   db.prepare(
     `
-    UPDATE tutorial_tasks
-    SET
-      title = ?,
-      status = ?,
-      priority = ?,
-      assignee = ?,
-      description = ?,
-      updated_at = ?
-    WHERE id = ?
-  `,
+      UPDATE tutorial_tasks
+      SET
+        title = ?,
+        status = ?,
+        priority = ?,
+        assignee = ?,
+        description = ?,
+        updated_at = ?
+      WHERE id = ?
+    `,
   ).run(
     payload.title,
     payload.status,
@@ -142,10 +168,4 @@ export async function deleteTutorialTask(id) {
 
   db.prepare('DELETE FROM tutorial_tasks WHERE id = ?').run(Number(id))
   return existingTask.id
-}
-
-export async function getTutorialTaskCount() {
-  const db = getDatabase()
-  const row = db.prepare('SELECT COUNT(*) AS count FROM tutorial_tasks').get()
-  return Number(row?.count || 0)
 }

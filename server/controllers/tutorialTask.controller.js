@@ -16,9 +16,11 @@ export async function getTasks(req, res) {
   const data = await listTutorialTasks({
     status: req.query.status,
     keyword: req.query.keyword,
+    page: req.query.page,
+    pageSize: req.query.pageSize,
   })
 
-  res.json(createSuccessResponse(data, '已返回 SQLite 任务列表'))
+  res.json(createSuccessResponse(data, '已返回 SQLite 分页任务列表'))
 }
 
 export async function getTaskDetail(req, res) {
