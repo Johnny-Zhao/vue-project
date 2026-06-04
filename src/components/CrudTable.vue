@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type {
-  TableBatchAction,
-  TableColumnSchema,
-  TablePagination,
-} from './formSchemas'
+import type { TableBatchAction, TableColumnSchema, TablePagination } from './formSchemas'
 
 type TableRow = Record<string, unknown>
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     rows: TableRow[]
     columns: TableColumnSchema<any>[]
@@ -34,6 +30,7 @@ const emit = defineEmits<{
   pageChange: [page: number]
   sizeChange: [size: number]
   batchAction: [payload: { actionKey: string; rows: TableRow[] }]
+  rowClick: [row: TableRow]
 }>()
 
 const selectedRows = ref<TableRow[]>([])
@@ -82,13 +79,18 @@ function formatCell(column: TableColumnSchema<any>, row: TableRow, index: number
 
   return row[column.prop as string] ?? '-'
 }
+
+function resolveColumnProp(prop: string | number | symbol | undefined): string | undefined {
+  if (prop == null || prop === '') return undefined
+  return String(prop)
+}
 </script>
 
 <template>
   <section class="crud-table-shell">
     <div class="crud-table-toolbar">
       <div class="selection-summary">
-        <span>已选 {{ selectedRows.length }} 项</span>
+        <span>已选择 {{ selectedRows.length }} 项</span>
       </div>
 
       <div class="batch-actions">
@@ -115,13 +117,14 @@ function formatCell(column: TableColumnSchema<any>, row: TableRow, index: number
       class="crud-table"
       @selection-change="handleSelectionChange"
       @sort-change="handleSortChange"
+      @row-click="emit('rowClick', $event)"
     >
       <el-table-column v-if="selectionEnabled" type="selection" width="52" />
 
       <el-table-column
         v-for="column in columns"
         :key="column.key"
-        :prop="column.prop as string | undefined"
+        :prop="resolveColumnProp(column.prop)"
         :label="column.label"
         :width="column.width"
         :min-width="column.minWidth"
@@ -182,6 +185,10 @@ function formatCell(column: TableColumnSchema<any>, row: TableRow, index: number
 .crud-pagination {
   display: flex;
   justify-content: flex-end;
+}
+
+:deep(.crud-table .el-table__row) {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {

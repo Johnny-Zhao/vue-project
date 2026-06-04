@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/features/auth/store'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { matchesPermissions, matchesRole } from '@/features/auth/permissions'
+import { useAuthStore } from '@/features/auth/store'
 import { useTaskStore } from '@/features/task/store'
 
 const route = useRoute()
@@ -29,9 +29,31 @@ const navigationItems = computed(() =>
     .map((item) => ({
       name: item.name,
       path: item.path,
-      title: item.meta.title ?? String(item.name ?? item.path),
+      title: String(item.meta.title ?? item.name ?? item.path),
     })),
 )
+
+const currentPageTitle = computed(() => String(route.meta.title ?? '控制台'))
+
+const currentPageHint = computed(() => {
+  if (route.name === 'home') {
+    return '查看任务看板、权限差异和页面级操作。'
+  }
+
+  if (route.name === 'about') {
+    return '浏览项目里的 TypeScript 练习和补充说明。'
+  }
+
+  if (route.name === 'taskCreate') {
+    return '使用统一表单能力创建新的任务记录。'
+  }
+
+  if (route.name === 'truckList') {
+    return '查看车辆列表、详情信息以及 AI 助手分析结果。'
+  }
+
+  return '浏览当前页面内容。'
+})
 
 async function handleLogout() {
   authStore.logout()
@@ -43,181 +65,300 @@ async function handleLogout() {
   <RouterView v-if="!showShell" />
 
   <div v-else class="app-shell">
-    <header class="shell-header">
-      <div>
-        <p class="eyebrow">Vue 3 + TypeScript + Auth</p>
-        <h1>Engineering Demo Console</h1>
-        <p class="subtitle">
-          This app wires request handling, authentication, routing, and state together like a small admin system.
-        </p>
+    <aside class="shell-sidebar">
+      <div class="sidebar-brand">
+        <p class="brand-tag">Vue 3 + TypeScript</p>
+        <h1>后台演示台</h1>
+        <p class="brand-copy">把路由、权限、请求和状态管理组合成一个可演示的小型后台。</p>
       </div>
 
-      <div class="header-side">
-        <div class="header-stats">
-          <div class="stat-chip">
-            <span>Pending Tasks</span>
+      <section class="sidebar-card account-card">
+        <div class="account-copy">
+          <span>{{ user?.name ?? '访客' }}</span>
+          <small>{{ authStore.role ?? 'guest' }}</small>
+        </div>
+
+        <button type="button" @click="handleLogout">退出登录</button>
+      </section>
+
+      <nav class="side-nav">
+        <p class="nav-title">功能菜单</p>
+
+        <RouterLink
+          v-for="item in navigationItems"
+          :key="String(item.name)"
+          :to="item.path"
+          class="nav-link"
+        >
+          <span class="nav-badge"></span>
+          <span>{{ item.title }}</span>
+        </RouterLink>
+      </nav>
+
+      <section class="sidebar-card stat-card">
+        <p class="nav-title">看板概览</p>
+
+        <div class="stat-grid">
+          <div>
+            <span>待办任务</span>
             <strong>{{ pendingCount }}</strong>
           </div>
-          <div class="stat-chip">
-            <span>Completion</span>
+          <div>
+            <span>完成率</span>
             <strong>{{ completionRate }}%</strong>
           </div>
         </div>
+      </section>
+    </aside>
 
-        <div class="account-panel">
-          <div class="account-copy">
-            <span>{{ user?.name ?? 'Guest' }}</span>
-            <small>{{ authStore.role ?? 'guest' }}</small>
-          </div>
-          <button type="button" @click="handleLogout">Sign Out</button>
+    <main class="shell-main">
+      <header class="shell-topbar">
+        <div>
+          <p class="page-eyebrow">当前页面</p>
+          <h2>{{ currentPageTitle }}</h2>
+          <p class="page-hint">{{ currentPageHint }}</p>
         </div>
-      </div>
-    </header>
 
-    <nav class="main-nav">
-      <RouterLink v-for="item in navigationItems" :key="String(item.name)" :to="item.path">
-        {{ item.title }}
-      </RouterLink>
-    </nav>
+        <div class="topbar-summary">
+          <span>当前账号</span>
+          <strong>{{ user?.name ?? '访客' }}</strong>
+        </div>
+      </header>
 
-    <RouterView />
+      <section class="page-container">
+        <RouterView />
+      </section>
+    </main>
   </div>
 </template>
 
 <style scoped>
 .app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 1.5rem;
+  min-height: calc(100vh - 80px);
+}
+
+.shell-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.shell-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 1.75rem;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 32px;
   border: 1px solid rgba(29, 59, 54, 0.12);
-  border-radius: 28px;
   background:
-    radial-gradient(circle at top left, rgba(235, 166, 96, 0.28), transparent 30%),
-    linear-gradient(135deg, rgba(16, 73, 63, 0.95), rgba(28, 39, 58, 0.96));
+    radial-gradient(circle at top left, rgba(235, 166, 96, 0.22), transparent 28%),
+    linear-gradient(180deg, #173937, #132c2b);
   color: #f8f3eb;
+  position: sticky;
+  top: 32px;
+  height: fit-content;
 }
 
-.eyebrow {
-  margin-bottom: 0.5rem;
+.sidebar-brand h1 {
+  margin-top: 0.35rem;
+  font-size: 2rem;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.brand-tag,
+.nav-title,
+.page-eyebrow {
   color: rgba(248, 243, 235, 0.76);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 0.78rem;
-}
-
-.shell-header h1 {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: 0.76rem;
   font-weight: 700;
-  line-height: 1.1;
 }
 
-.subtitle {
-  max-width: 42rem;
+.brand-copy {
   margin-top: 0.75rem;
   color: rgba(248, 243, 235, 0.84);
+  line-height: 1.6;
 }
 
-.header-side {
+.sidebar-card {
+  padding: 1rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.account-card {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-width: 320px;
-}
-
-.header-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 1rem;
-}
-
-.stat-chip {
-  padding: 1rem;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.stat-chip span {
-  display: block;
-  color: rgba(248, 243, 235, 0.76);
-  font-size: 0.85rem;
-}
-
-.stat-chip strong {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 1.8rem;
-  font-weight: 700;
-}
-
-.account-panel {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.85rem 1rem;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.08);
+  gap: 0.85rem;
 }
 
 .account-copy {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
+}
+
+.account-copy span {
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
 .account-copy small {
-  color: rgba(248, 243, 235, 0.72);
+  color: rgba(248, 243, 235, 0.76);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
-.account-panel button {
+.account-card button {
   border: 0;
   border-radius: 999px;
-  padding: 0.55rem 0.9rem;
+  padding: 0.7rem 0.95rem;
   background: #f4e7d2;
   color: #173937;
   cursor: pointer;
 }
 
-.main-nav {
+.side-nav {
   display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
-.main-nav a {
-  padding: 0.75rem 1rem;
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 18px;
+  color: rgba(248, 243, 235, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.nav-link.router-link-exact-active {
+  color: #173937;
+  background: #f4e7d2;
+  border-color: rgba(244, 231, 210, 0.85);
+}
+
+.nav-badge {
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  color: var(--color-heading);
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(29, 59, 54, 0.1);
+  background: currentColor;
+  opacity: 0.8;
 }
 
-.main-nav a.router-link-exact-active {
-  background: #163f38;
-  color: #f8f3eb;
+.stat-card {
+  margin-top: auto;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.stat-grid div {
+  padding: 0.9rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stat-grid span {
+  display: block;
+  color: rgba(248, 243, 235, 0.74);
+  font-size: 0.82rem;
+}
+
+.stat-grid strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+
+.shell-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.shell-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.5rem;
+  border-radius: 28px;
+  border: 1px solid rgba(29, 59, 54, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 18px 40px rgba(19, 35, 33, 0.08);
+}
+
+.shell-topbar h2 {
+  margin-top: 0.35rem;
+  color: #173937;
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.page-eyebrow {
+  color: #7a5d2d;
+}
+
+.page-hint {
+  margin-top: 0.65rem;
+  color: #556260;
+}
+
+.topbar-summary {
+  min-width: 180px;
+  padding: 1rem 1.1rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fcf2df, #f2dfbd);
+}
+
+.topbar-summary span {
+  display: block;
+  color: #7a5d2d;
+  font-size: 0.85rem;
+}
+
+.topbar-summary strong {
+  display: block;
+  margin-top: 0.3rem;
+  color: #173937;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.page-container {
+  min-width: 0;
+}
+
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .shell-sidebar {
+    position: static;
+  }
 }
 
 @media (max-width: 720px) {
-  .shell-header {
-    flex-direction: column;
+  .shell-topbar,
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
 
-  .header-side,
-  .header-stats {
-    min-width: 100%;
-  }
-
-  .account-panel {
+  .shell-topbar {
     flex-direction: column;
     align-items: stretch;
   }

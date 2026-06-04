@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:full": "run-p server:dev dev",
     "dev:test": "vite --mode test",
     "dev:prod": "vite --mode production",
     "build": "run-p type-check \"build-only {@}\" --",
     "build:test": "run-p type-check \"build-only --mode test\" --",
     "build:prod": "run-p type-check \"build-only --mode production\" --",
     "preview": "vite preview",
+    "server:dev": "node --watch server/index.js",
+    "server:start": "node server/index.js",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "build-only": "vite build",
@@ -23,7 +26,11 @@
   },
   "dependencies": {
     "axios": "^1.13.1",
+    "better-sqlite3": "^12.10.0",
+    "dotenv": "^17.2.2",
     "element-plus": "^2.14.0",
+    "express": "^5.1.0",
+    "openai": "^6.4.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4"
@@ -44,6 +51,7 @@
     "eslint-plugin-oxlint": "~1.60.0",
     "eslint-plugin-playwright": "^2.10.1",
     "eslint-plugin-vue": "~10.8.0",
+    "husky": "^9.1.7",
     "jiti": "^2.6.1",
     "jsdom": "^29.0.2",
     "less": "^4.4.2",
@@ -55,8 +63,7 @@
     "vite": "^8.0.8",
     "vite-plugin-vue-devtools": "^8.1.1",
     "vitest": "^4.1.4",
-    "vue-tsc": "^3.2.6",
-    "husky": "^9.1.7"
+    "vue-tsc": "^3.2.6"
   },
   "lint-staged": {
     "*.{ts,tsx,vue,mts,cts}": [

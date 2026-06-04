@@ -33,6 +33,8 @@ function createManualChunk(id: string) {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const apiPrefix = env.VITE_API_BASE_URL || '/api'
+  const apiTarget = env.VITE_API_TARGET || 'http://127.0.0.1:3001'
   const truckApiPrefix = env.VITE_TRUCK_API_BASE_URL || '/smart-ebao-api'
   const truckApiTarget = env.VITE_TRUCK_API_TARGET || 'https://muniu-test.smartebao.com'
   const enableVueDevTools = env.VITE_ENABLE_DEVTOOLS === 'true'
@@ -41,6 +43,10 @@ export default defineConfig(({ mode }) => {
     plugins: [vue(), vueJsx(), enableVueDevTools ? vueDevTools() : null].filter(Boolean),
     server: {
       proxy: {
+        [apiPrefix]: {
+          target: apiTarget,
+          changeOrigin: true,
+        },
         [truckApiPrefix]: {
           target: truckApiTarget,
           changeOrigin: true,
@@ -50,6 +56,10 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       proxy: {
+        [apiPrefix]: {
+          target: apiTarget,
+          changeOrigin: true,
+        },
         [truckApiPrefix]: {
           target: truckApiTarget,
           changeOrigin: true,
