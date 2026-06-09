@@ -9,6 +9,7 @@ import {
   fetchTutorialTasksApi,
   updateTutorialTaskApi,
 } from '@/api/tutorialTasks'
+import { useDialog } from '@/composables/useDialog'
 import type {
   TutorialGuide,
   TutorialTask,
@@ -31,6 +32,11 @@ const statusFilter = ref<'all' | 'todo' | 'doing' | 'done'>('all')
 const currentPage = ref(1)
 const pageSize = ref(5)
 
+const taskDialog = useDialog<TutorialTask>({
+  createTitle: '新建任务',
+  editTitle: '编辑任务',
+})
+
 const defaultForm = (): TutorialTaskPayload => ({
   title: '',
   status: 'todo',
@@ -41,7 +47,7 @@ const defaultForm = (): TutorialTaskPayload => ({
 
 const form = reactive<TutorialTaskPayload>(defaultForm())
 
-const isEditing = computed(() => selectedTaskId.value !== null)
+const isEditing = computed(() => taskDialog.mode.value === 'edit' && selectedTaskId.value !== null)
 
 function fillForm(task: TutorialTask) {
   form.title = task.title
@@ -58,6 +64,26 @@ function resetForm() {
 
 function resolveErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '请求失败，请稍后重试。'
+}
+
+function openCreateDialog() {
+  requestError.value = ''
+  resetForm()
+  taskDialog.openCreate()
+}
+
+function closeTaskDialog() {
+  taskDialog.close()
+  resetForm()
+}
+
+function validateForm() {
+  if (!form.title.trim()) {
+    ElMessage.warning('请先填写任务标题')
+    return false
+  }
+
+  return true
 }
 
 async function applyPageResult(result: TutorialTaskPageResult) {
@@ -95,7 +121,7 @@ async function loadTasks(options: { resetPage?: boolean } = {}) {
       selectedTaskId.value != null &&
       !tasks.value.some((task) => task.id === selectedTaskId.value)
     ) {
-      resetForm()
+      closeTaskDialog()
     }
   } catch (error) {
     requestError.value = resolveErrorMessage(error)
@@ -112,6 +138,7 @@ async function handleSelectTask(taskId: number) {
     const task = await fetchTutorialTaskDetailApi(taskId)
     selectedTaskId.value = task.id
     fillForm(task)
+    taskDialog.openEdit(task)
   } catch (error) {
     requestError.value = resolveErrorMessage(error)
   } finally {
@@ -120,25 +147,30 @@ async function handleSelectTask(taskId: number) {
 }
 
 async function handleSubmit() {
+  if (!validateForm()) {
+    return
+  }
+
   saving.value = true
   requestError.value = ''
 
   try {
     const payload: TutorialTaskPayload = {
-      title: form.title,
+      title: form.title.trim(),
       status: form.status,
       priority: form.priority,
-      assignee: form.assignee,
-      description: form.description,
+      assignee: form.assignee.trim(),
+      description: form.description.trim(),
     }
 
-    const task = isEditing.value
-      ? await updateTutorialTaskApi(selectedTaskId.value as number, payload)
-      : await createTutorialTaskApi(payload)
+    if (isEditing.value) {
+      await updateTutorialTaskApi(selectedTaskId.value as number, payload)
+    } else {
+      await createTutorialTaskApi(payload)
+    }
 
     ElMessage.success(isEditing.value ? '任务已更新' : '任务已创建')
-    selectedTaskId.value = task.id
-    fillForm(task)
+    closeTaskDialog()
     await loadTasks()
   } catch (error) {
     requestError.value = resolveErrorMessage(error)
@@ -156,7 +188,7 @@ function handleTableRowClick(row: TutorialTask) {
 }
 
 async function handleDelete(task: TutorialTask) {
-  await ElMessageBox.confirm(`确认删除「${task.title}」吗？`, '删除任务', {
+  await ElMessageBox.confirm(`确认删除“${task.title}”吗？`, '删除任务', {
     type: 'warning',
     confirmButtonText: '删除',
     cancelButtonText: '取消',
@@ -169,7 +201,7 @@ async function handleDelete(task: TutorialTask) {
     await deleteTutorialTaskApi(task.id)
 
     if (selectedTaskId.value === task.id) {
-      resetForm()
+      closeTaskDialog()
     }
 
     ElMessage.success('任务已删除')
@@ -235,7 +267,7 @@ onMounted(() => {
         <el-button :loading="loading" type="primary" @click="loadTasks({ resetPage: true })">
           刷新任务列表
         </el-button>
-        <el-button @click="resetForm">切回新增模式</el-button>
+        <el-button type="success" @click="openCreateDialog">新建任务</el-button>
       </div>
     </header>
 
@@ -291,68 +323,7 @@ onMounted(() => {
       </article>
     </div>
 
-    <div class="workspace-grid">
-      <article class="page-card panel">
-        <div class="panel-head">
-          <div>
-            <p class="section-label">任务表单</p>
-            <h3>{{ isEditing ? `编辑任务 #${selectedTaskId}` : '新建任务' }}</h3>
-          </div>
-        </div>
-
-        <div class="form-grid">
-          <label>
-            <span>标题</span>
-            <input
-              v-model="form.title"
-              type="text"
-              maxlength="60"
-              placeholder="例如：补全 SQLite CRUD 接口"
-            />
-          </label>
-
-          <label>
-            <span>负责人</span>
-            <input v-model="form.assignee" type="text" maxlength="30" placeholder="例如：Backend" />
-          </label>
-
-          <label>
-            <span>状态</span>
-            <select v-model="form.status">
-              <option value="todo">todo</option>
-              <option value="doing">doing</option>
-              <option value="done">done</option>
-            </select>
-          </label>
-
-          <label>
-            <span>优先级</span>
-            <select v-model="form.priority">
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-            </select>
-          </label>
-
-          <label class="textarea-field">
-            <span>描述</span>
-            <textarea
-              v-model="form.description"
-              rows="5"
-              maxlength="300"
-              placeholder="写一点任务背景，方便你观察数据库字段是怎么被更新的"
-            />
-          </label>
-        </div>
-
-        <div class="form-actions">
-          <el-button type="primary" :loading="saving" @click="handleSubmit">
-            {{ isEditing ? '保存修改' : '创建任务' }}
-          </el-button>
-          <el-button @click="resetForm">重置表单</el-button>
-        </div>
-      </article>
-
+    <div class="workspace-grid single-column">
       <article class="page-card panel">
         <div class="panel-head">
           <div>
@@ -384,8 +355,8 @@ onMounted(() => {
           :row-class-name="tableRowClassName"
           @row-click="handleTableRowClick"
         >
-          <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip />
-          <el-table-column label="描述" min-width="200" show-overflow-tooltip>
+          <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+          <el-table-column label="描述" min-width="220" show-overflow-tooltip>
             <template #default="{ row }">
               {{ row.description || '暂无描述' }}
             </template>
@@ -426,6 +397,68 @@ onMounted(() => {
         </div>
       </article>
     </div>
+
+    <el-dialog
+      v-model="taskDialog.visible.value"
+      :title="taskDialog.title.value"
+      width="640px"
+      destroy-on-close
+      @closed="closeTaskDialog"
+    >
+      <div class="form-grid dialog-form">
+        <label>
+          <span>标题</span>
+          <input
+            v-model="form.title"
+            type="text"
+            maxlength="60"
+            placeholder="例如：补全 SQLite CRUD 接口"
+          />
+        </label>
+
+        <label>
+          <span>负责人</span>
+          <input v-model="form.assignee" type="text" maxlength="30" placeholder="例如：Backend" />
+        </label>
+
+        <label>
+          <span>状态</span>
+          <select v-model="form.status">
+            <option value="todo">todo</option>
+            <option value="doing">doing</option>
+            <option value="done">done</option>
+          </select>
+        </label>
+
+        <label>
+          <span>优先级</span>
+          <select v-model="form.priority">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+          </select>
+        </label>
+
+        <label class="textarea-field">
+          <span>描述</span>
+          <textarea
+            v-model="form.description"
+            rows="5"
+            maxlength="300"
+            placeholder="写一点任务背景，方便你观察数据库字段是怎么被更新的"
+          />
+        </label>
+      </div>
+
+      <template #footer>
+        <div class="dialog-actions">
+          <el-button @click="closeTaskDialog">取消</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSubmit">
+            {{ isEditing ? '保存修改' : '创建任务' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -463,6 +496,10 @@ onMounted(() => {
   grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.25fr);
 }
 
+.single-column {
+  grid-template-columns: 1fr;
+}
+
 .section-label {
   color: #7a5d2d;
   letter-spacing: 0.08em;
@@ -486,8 +523,7 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-.hero-actions,
-.form-actions {
+.hero-actions {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -549,7 +585,10 @@ onMounted(() => {
 .form-grid {
   display: grid;
   gap: 0.9rem;
-  margin-top: 1rem;
+}
+
+.dialog-form {
+  margin-top: 0;
 }
 
 .form-grid label {
@@ -573,10 +612,6 @@ onMounted(() => {
 
 .textarea-field {
   grid-column: 1 / -1;
-}
-
-.form-actions {
-  margin-top: 1rem;
 }
 
 .filter-bar {
@@ -603,6 +638,12 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 @media (max-width: 1080px) {
