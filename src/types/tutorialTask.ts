@@ -1,3 +1,8 @@
+import type { KeywordQuery, PageQuery } from '@/types/query'
+
+export type TutorialTaskStatus = 'todo' | 'doing' | 'done'
+export type TutorialTaskPriority = 'low' | 'medium' | 'high'
+
 export interface TutorialMiddlewareItem {
   name: string
   role: string
@@ -28,8 +33,8 @@ export interface TutorialGuide {
 export interface TutorialTask {
   id: number
   title: string
-  status: 'todo' | 'doing' | 'done'
-  priority: 'low' | 'medium' | 'high'
+  status: TutorialTaskStatus
+  priority: TutorialTaskPriority
   assignee: string
   description: string
   createdAt: string
@@ -38,18 +43,19 @@ export interface TutorialTask {
 
 export interface TutorialTaskPayload {
   title: string
-  status: 'todo' | 'doing' | 'done'
-  priority: 'low' | 'medium' | 'high'
+  status: TutorialTaskStatus
+  priority: TutorialTaskPriority
   assignee: string
   description: string
 }
 
-export interface TutorialTaskQuery {
-  status?: string
-  keyword?: string
-  page?: number
-  pageSize?: number
+export interface TutorialTaskFilterQuery extends KeywordQuery {
+  status?: TutorialTaskStatus
+  sortField?: keyof TutorialTask
+  sortOrder?: 'asc' | 'desc'
 }
+
+export type TutorialTaskQuery = PageQuery & TutorialTaskFilterQuery
 
 export interface TutorialTaskPageResult {
   list: TutorialTask[]

@@ -1,5 +1,14 @@
 export type TutorialTaskStatus = 'todo' | 'doing' | 'done'
 export type TutorialTaskPriority = 'low' | 'medium' | 'high'
+export type TutorialTaskSortField =
+  | 'id'
+  | 'title'
+  | 'status'
+  | 'priority'
+  | 'assignee'
+  | 'createdAt'
+  | 'updatedAt'
+export type TutorialTaskSortOrder = 'asc' | 'desc'
 
 export interface TutorialMiddlewareItem {
   name: string
@@ -52,6 +61,8 @@ export interface TutorialTaskQuery {
   keyword?: string
   page?: number | string
   pageSize?: number | string
+  sortField?: string
+  sortOrder?: string
 }
 
 export interface TutorialTaskFilters {
@@ -59,6 +70,14 @@ export interface TutorialTaskFilters {
   keyword: string
   page: number
   pageSize: number
+  sortField?: TutorialTaskSortField
+  sortOrder?: TutorialTaskSortOrder
+}
+
+export interface TutorialTaskListQuery {
+  whereClause: string
+  orderByClause: string
+  values: unknown[]
 }
 
 export interface TutorialTaskPageResult {

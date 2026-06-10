@@ -15,6 +15,7 @@ import type {
   TutorialTask,
   TutorialTaskPageResult,
   TutorialTaskPayload,
+  TutorialTaskQuery,
 } from '@/types/tutorialTask'
 
 const requestError = ref('')
@@ -48,6 +49,12 @@ const defaultForm = (): TutorialTaskPayload => ({
 const form = reactive<TutorialTaskPayload>(defaultForm())
 
 const isEditing = computed(() => taskDialog.mode.value === 'edit' && selectedTaskId.value !== null)
+
+type TableSortOrder = 'ascending' | 'descending' | null
+type TableSortState = {
+  prop: keyof TutorialTask | null
+  order: TableSortOrder
+}
 
 function fillForm(task: TutorialTask) {
   form.title = task.title
@@ -108,12 +115,21 @@ async function loadTasks(options: { resetPage?: boolean } = {}) {
       currentPage.value = 1
     }
 
-    const result = await fetchTutorialTasksApi({
+    const query: TutorialTaskQuery = {
       keyword: keyword.value.trim() || undefined,
       status: statusFilter.value === 'all' ? undefined : statusFilter.value,
       page: currentPage.value,
       pageSize: pageSize.value,
-    })
+      sortField: sortState.prop ?? undefined,
+      sortOrder:
+        sortState.order === 'ascending'
+          ? 'asc'
+          : sortState.order === 'descending'
+            ? 'desc'
+            : undefined,
+    }
+
+    const result = await fetchTutorialTasksApi(query)
 
     await applyPageResult(result)
 
@@ -185,6 +201,21 @@ function tableRowClassName({ row }: { row: TutorialTask }) {
 
 function handleTableRowClick(row: TutorialTask) {
   void handleSelectTask(row.id)
+}
+
+const sortState = reactive<TableSortState>({
+  prop: null,
+  order: null,
+})
+
+function handleSortChange(payload: {
+  column: unknown
+  prop: keyof TutorialTask | null
+  order: TableSortOrder
+}) {
+  sortState.prop = payload.order ? payload.prop : null
+  sortState.order = payload.order
+  void loadTasks()
 }
 
 async function handleDelete(task: TutorialTask) {
@@ -354,16 +385,23 @@ onMounted(() => {
           empty-text="暂无任务"
           :row-class-name="tableRowClassName"
           @row-click="handleTableRowClick"
+          @sort-change="handleSortChange"
         >
-          <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
-          <el-table-column label="描述" min-width="220" show-overflow-tooltip>
+          <el-table-column
+            prop="title"
+            label="标题"
+            min-width="180"
+            show-overflow-tooltip
+            sortable="custom"
+          />
+          <el-table-column label="描述" min-width="220" show-overflow-tooltip sortable="custom">
             <template #default="{ row }">
               {{ row.description || '暂无描述' }}
             </template>
           </el-table-column>
-          <el-table-column prop="status" label="状态" width="88" />
-          <el-table-column prop="priority" label="优先级" width="96" />
-          <el-table-column label="负责人" width="120" show-overflow-tooltip>
+          <el-table-column prop="status" label="状态" width="88" sortable="custom" />
+          <el-table-column prop="priority" label="优先级" width="96" sortable="custom" />
+          <el-table-column label="负责人" width="120" show-overflow-tooltip sortable="custom">
             <template #default="{ row }">
               {{ row.assignee || '未分配' }}
             </template>

@@ -6,6 +6,7 @@ import type {
   ApiSuccessResponse,
   BackendResponse,
   MockRequestOptions,
+  RequestParamValue,
   RequestConfig,
 } from '@/types/request'
 import { getAccessToken } from '@/features/auth/session'
@@ -47,19 +48,53 @@ const httpClient = axios.create({
   timeout: 15000,
 })
 
-function buildQueryString(params: RequestConfig['params'] = {}) {
-  const searchParams = new URLSearchParams()
+type SerializableParams = Record<string, RequestParamValue | RequestParamValue[]>
 
-  Object.entries(params).forEach(([key, value]) => {
+function normalizeRequestParams(params?: object) {
+  if (!params) {
+    return undefined
+  }
+
+  const normalized: SerializableParams = {}
+
+  Object.entries(params as Record<string, unknown>).forEach(([key, value]) => {
     if (value === undefined || value === null || value === '') {
       return
     }
 
-    searchParams.append(key, String(value))
+    if (Array.isArray(value)) {
+      const filtered = value.filter(
+        (item): item is Exclude<RequestParamValue, null | undefined> =>
+          item !== undefined && item !== null && item !== '',
+      )
+
+      if (filtered.length > 0) {
+        normalized[key] = filtered
+      }
+
+      return
+    }
+
+    normalized[key] = String(value)
   })
 
-  const queryString = searchParams.toString()
-  return queryString ? `?${queryString}` : ''
+  return Object.keys(normalized).length > 0 ? normalized : undefined
+}
+
+function stringifyParams(params: SerializableParams = {}) {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        searchParams.append(key, String(item))
+      })
+    } else {
+      searchParams.append(key, String(value))
+    }
+  })
+
+  return searchParams.toString()
 }
 
 function createHeaders(configHeaders?: Record<string, string>, auth = true) {
@@ -78,12 +113,42 @@ function createHeaders(configHeaders?: Record<string, string>, auth = true) {
   return headers
 }
 
-function createDedupeKey<Body>(config: RequestConfig<Body>) {
+function stableSerialize(value: unknown): string {
+  if (value === undefined) {
+    return 'undefined'
+  }
+
+  if (value === null) {
+    return 'null'
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(',')}]`
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+      left.localeCompare(right),
+    )
+
+    return `{${entries.map(([key, item]) => `${key}:${stableSerialize(item)}`).join(',')}}`
+  }
+
+  return String(value)
+}
+
+function createDedupeKey<Body, Params extends object | undefined>(
+  config: RequestConfig<Body, Params>,
+) {
   if (config.dedupeKey) {
     return config.dedupeKey
   }
 
-  return `${config.method ?? 'GET'}::${config.baseURL ?? DEFAULT_BASE_URL}::${config.url}`
+  const normalizedParams = normalizeRequestParams(config.params)
+  const paramsKey = normalizedParams ? stableSerialize(normalizedParams) : ''
+  const dataKey = config.data !== undefined ? stableSerialize(config.data) : ''
+
+  return `${config.method ?? 'GET'}::${config.baseURL ?? DEFAULT_BASE_URL}::${config.url}::${paramsKey}::${dataKey}`
 }
 
 function linkAbortSignals(signal?: AbortSignal, dedupeController?: AbortController) {
@@ -123,7 +188,7 @@ function notifyGlobalError(message: string, suppressGlobalErrorMessage = false) 
   ElMessage.error(message)
 }
 
-function createAbortController(config: RequestConfig<unknown>) {
+function createAbortController(config: RequestConfig<unknown, object | undefined>) {
   const dedupeKey = createDedupeKey(config)
   const previousController = pendingRequests.get(dedupeKey)
   previousController?.abort()
@@ -183,9 +248,11 @@ function unwrapApiResponse<T>(
   })
 }
 
-export async function request<ResponseData, RequestData = unknown>(
-  config: RequestConfig<RequestData>,
-): Promise<ResponseData> {
+export async function request<
+  ResponseData,
+  RequestData = unknown,
+  Params extends object | undefined = object | undefined,
+>(config: RequestConfig<RequestData, Params>): Promise<ResponseData> {
   const {
     url,
     method = 'GET',
@@ -197,13 +264,20 @@ export async function request<ResponseData, RequestData = unknown>(
     suppressGlobalErrorMessage = false,
   } = config
 
+  const normalizedParams = normalizeRequestParams(params)
   const { dedupeKey, controller } = createAbortController(config)
   linkAbortSignals(signal, controller)
 
   try {
     const response = await httpClient.request<ResponseData>({
-      url: `${baseURL}${url}${buildQueryString(params)}`,
+      url: `${baseURL}${url}`,
       method,
+      params: normalizedParams,
+      paramsSerializer: normalizedParams
+        ? {
+            serialize: stringifyParams,
+          }
+        : undefined,
       data,
       headers: createHeaders(config.headers, auth),
       signal: controller.signal,
@@ -259,20 +333,24 @@ export function createApiFailureResponse(code: number, message: string): ApiFail
   }
 }
 
-export async function requestApi<ResponseData, RequestData = unknown>(
-  config: RequestConfig<RequestData>,
-): Promise<ResponseData> {
-  const response = await request<ApiResponse<ResponseData>, RequestData>(config)
+export async function requestApi<
+  ResponseData,
+  RequestData = unknown,
+  Params extends object | undefined = object | undefined,
+>(config: RequestConfig<RequestData, Params>): Promise<ResponseData> {
+  const response = await request<ApiResponse<ResponseData>, RequestData, Params>(config)
   return unwrapApiResponse(response, {
     auth: config.auth,
     suppressGlobalErrorMessage: config.suppressGlobalErrorMessage,
   })
 }
 
-export async function requestData<ResponseData, RequestData = unknown>(
-  config: RequestConfig<RequestData>,
-): Promise<ResponseData> {
-  const response = await request<BackendResponse<ResponseData>, RequestData>(config)
+export async function requestData<
+  ResponseData,
+  RequestData = unknown,
+  Params extends object | undefined = object | undefined,
+>(config: RequestConfig<RequestData, Params>): Promise<ResponseData> {
+  const response = await request<BackendResponse<ResponseData>, RequestData, Params>(config)
 
   if (!response.succeed || response.code !== 200) {
     if (response.code === 401 && config.auth !== false) {

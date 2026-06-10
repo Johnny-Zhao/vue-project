@@ -22,14 +22,7 @@ export function fetchTutorialTasksApi(params?: TutorialTaskQuery) {
   return requestApi<TutorialTaskPageResult>({
     url: '/tutorial/tasks',
     method: 'GET',
-    params: params
-      ? {
-          status: params.status,
-          keyword: params.keyword,
-          page: params.page,
-          pageSize: params.pageSize,
-        }
-      : undefined,
+    params,
     baseURL: API_BASE_URL,
     auth: false,
   })

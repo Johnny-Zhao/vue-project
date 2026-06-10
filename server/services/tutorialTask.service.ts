@@ -4,6 +4,8 @@ import type {
   TutorialTaskFilters,
   TutorialTaskPageResult,
   TutorialTaskPayload,
+  TutorialTaskSortField,
+  TutorialTaskSortOrder,
 } from '../types/tutorial.ts'
 import {
   createTutorialTask as createTutorialTaskRecord,
@@ -32,6 +34,34 @@ function parsePositiveInt(value: unknown, fallback: number) {
   }
 
   return parsed
+}
+
+const allowedSortFields: TutorialTaskSortField[] = [
+  'id',
+  'title',
+  'status',
+  'priority',
+  'assignee',
+  'createdAt',
+  'updatedAt',
+]
+
+function parseSortField(value: unknown): TutorialTaskSortField | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  return allowedSortFields.includes(value as TutorialTaskSortField)
+    ? (value as TutorialTaskSortField)
+    : undefined
+}
+
+function parseSortOrder(value: unknown): TutorialTaskSortOrder | undefined {
+  if (value === 'asc' || value === 'desc') {
+    return value
+  }
+
+  return undefined
 }
 
 export function getTutorialGuide(): TutorialGuide {
@@ -102,12 +132,16 @@ export async function listTutorialTasks(
   const keyword = typeof filters.keyword === 'string' ? filters.keyword.trim().slice(0, 50) : ''
   const page = parsePositiveInt(filters.page, 1)
   const pageSize = Math.min(parsePositiveInt(filters.pageSize, 10), 50)
+  const sortField = parseSortField(filters.sortField)
+  const sortOrder = parseSortOrder(filters.sortOrder)
 
   const result = await listTutorialTaskRecords({
     status,
     keyword,
     page,
     pageSize,
+    sortField,
+    sortOrder,
   })
 
   return {

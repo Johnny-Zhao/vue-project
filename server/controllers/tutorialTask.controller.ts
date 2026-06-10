@@ -20,6 +20,8 @@ export const getTasks: ServerRequestHandler = async (req, res) => {
     keyword: req.query.keyword,
     page: req.query.page,
     pageSize: req.query.pageSize,
+    sortField: req.query.sortField,
+    sortOrder: req.query.sortOrder,
   })
 
   res.json(createSuccessResponse(data, '已返回 SQLite 分页任务列表'))

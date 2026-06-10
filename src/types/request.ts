@@ -27,10 +27,17 @@ export interface ListResponse<T> {
   total: number
 }
 
-export interface RequestConfig<Body = unknown> {
+export type RequestParamValue = string | number | boolean | null | undefined
+
+export type RequestParams = Record<string, RequestParamValue>
+
+export interface RequestConfig<
+  Body = unknown,
+  Params extends object | undefined = object | undefined,
+> {
   url: string
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  params?: Record<string, string | number | boolean | null | undefined>
+  params?: Params
   data?: Body
   headers?: Record<string, string>
   signal?: AbortSignal

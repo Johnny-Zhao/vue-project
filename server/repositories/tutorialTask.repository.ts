@@ -2,12 +2,24 @@ import { getDatabase } from '../database/sqlite.ts'
 import type {
   TutorialTask,
   TutorialTaskFilters,
+  TutorialTaskListQuery,
   TutorialTaskPayload,
   TutorialTaskRow,
+  TutorialTaskSortField,
 } from '../types/tutorial.ts'
 
 interface CountRow {
   count?: number | string
+}
+
+const sortColumnMap: Record<TutorialTaskSortField, string> = {
+  id: 'id',
+  title: 'title',
+  status: 'status',
+  priority: 'priority',
+  assignee: 'assignee',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
 }
 
 function mapTaskRow(row?: TutorialTaskRow | null): TutorialTask | null {
@@ -27,9 +39,10 @@ function mapTaskRow(row?: TutorialTaskRow | null): TutorialTask | null {
   }
 }
 
-function buildTaskQuery(filters: TutorialTaskFilters) {
+function buildTaskQuery(filters: TutorialTaskFilters): TutorialTaskListQuery {
   const conditions: string[] = []
   const values: unknown[] = []
+  const hasCustomSort = Boolean(filters.sortField && filters.sortOrder)
 
   if (filters.status) {
     conditions.push('status = ?')
@@ -42,15 +55,23 @@ function buildTaskQuery(filters: TutorialTaskFilters) {
     values.push(keyword, keyword, keyword)
   }
 
+  const sortColumn =
+    hasCustomSort && filters.sortField ? sortColumnMap[filters.sortField] : 'updated_at'
+  const sortDirection = filters.sortOrder === 'asc' ? 'ASC' : 'DESC'
+  const orderByClause = hasCustomSort
+    ? `ORDER BY ${sortColumn} ${sortDirection}, id DESC`
+    : 'ORDER BY updated_at DESC, id DESC'
+
   return {
     whereClause: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+    orderByClause,
     values,
   }
 }
 
 export async function listTutorialTasks(filters: TutorialTaskFilters) {
   const db = getDatabase()
-  const { whereClause, values } = buildTaskQuery(filters)
+  const { whereClause, orderByClause, values } = buildTaskQuery(filters)
   const offset = (filters.page - 1) * filters.pageSize
 
   const rows = db
@@ -67,7 +88,7 @@ export async function listTutorialTasks(filters: TutorialTaskFilters) {
           updated_at AS updatedAt
         FROM tutorial_tasks
         ${whereClause}
-        ORDER BY updated_at DESC, id DESC
+        ${orderByClause}
         LIMIT ?
         OFFSET ?;
       `,
