@@ -26,6 +26,18 @@ export const systemRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/postgresql-crud-playground',
+    name: 'postgresqlCrudPlayground',
+    component: () => import('@/views/PostgreSqlCrudPlayground/index.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Node PostgreSQL CRUD',
+      menu: true,
+      menuOrder: 4,
+      roles: ['admin', 'viewer'],
+    },
+  },
+  {
     path: '/about',
     name: 'about',
     component: () => import('@/views/AboutView.vue'),
@@ -33,7 +45,7 @@ export const systemRoutes: RouteRecordRaw[] = [
       requiresAuth: true,
       title: 'TypeScript Notes',
       menu: true,
-      menuOrder: 4,
+      menuOrder: 5,
       roles: ['admin', 'viewer'],
     },
   },

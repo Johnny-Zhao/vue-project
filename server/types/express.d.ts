@@ -14,6 +14,7 @@ declare module 'express' {
 
   export interface Response {
     status(code: number): this
+    statusCode: number
     json(body: unknown): this
     setHeader(name: string, value: string): void
     on(event: 'finish', listener: () => void): this
