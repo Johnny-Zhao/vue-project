@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { readStoredSession } from '@/features/auth/session'
 import { getRolePermissions, matchesPermissions, matchesRole } from '@/features/auth/permissions'
+import AppLayout from '@/layout/AppLayout.vue'
 import { authRoutes } from './modules/auth'
 import { systemRoutes } from './modules/system'
 import { taskRoutes } from './modules/task'
@@ -8,7 +9,14 @@ import { truckRoutes } from './modules/truck'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [...authRoutes, ...taskRoutes, ...systemRoutes, ...truckRoutes],
+  routes: [
+    ...authRoutes,
+    {
+      path: '/',
+      component: AppLayout,
+      children: [...taskRoutes, ...systemRoutes, ...truckRoutes],
+    },
+  ],
 })
 
 router.beforeEach((to) => {
@@ -35,7 +43,8 @@ router.beforeEach((to) => {
 
   if (
     isAuthenticated &&
-    (!matchesRole(userRole, to.meta.roles) || !matchesPermissions(userPermissions, to.meta.permissions))
+    (!matchesRole(userRole, to.meta.roles) ||
+      !matchesPermissions(userPermissions, to.meta.permissions))
   ) {
     return {
       name: 'forbidden',

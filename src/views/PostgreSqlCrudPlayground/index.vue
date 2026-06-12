@@ -253,29 +253,35 @@ void loadTasks()
 <template>
   <section class="crud-page">
     <article class="page-card panel">
-      <div class="toolbar">
-        <div class="filter-bar">
-          <el-input v-model="keyword" clearable placeholder="按标题 / 负责人 / 描述搜索" />
-          <el-select v-model="statusFilter" placeholder="请选择状态">
-            <el-option label="全部状态" value="all" />
-            <el-option label="todo" value="todo" />
-            <el-option label="doing" value="doing" />
-            <el-option label="done" value="done" />
-          </el-select>
+      <div class="panel-head">
+        <div>
+          <p class="section-label">Node + PostgreSQL</p>
+          <h2>保留最核心的查询、按钮和表格</h2>
+          <p class="page-copy">这个页面更偏向实操，专注筛选、排序、分页和增删改查。</p>
         </div>
 
         <div class="action-bar">
-          <el-button :loading="loading" @click="loadTasks({ resetPage: true })">查询</el-button>
-          <el-button :loading="loading" type="primary" @click="loadTasks({ resetPage: true })">
-            刷新
-          </el-button>
-          <el-button type="success" @click="openCreateDialog">新建任务</el-button>
+          <el-button :loading="loading" @click="loadTasks({ resetPage: true })">刷新</el-button>
+          <el-button type="primary" @click="openCreateDialog">新建任务</el-button>
         </div>
       </div>
 
       <div v-if="requestError" class="error-banner">{{ requestError }}</div>
 
-      <div class="panel-head">
+      <div class="filter-bar">
+        <el-input v-model="keyword" clearable placeholder="按标题、负责人或描述搜索" />
+        <el-select v-model="statusFilter" placeholder="状态">
+          <el-option label="全部状态" value="all" />
+          <el-option label="todo" value="todo" />
+          <el-option label="doing" value="doing" />
+          <el-option label="done" value="done" />
+        </el-select>
+        <el-button :loading="loading" type="primary" @click="loadTasks({ resetPage: true })">
+          查询
+        </el-button>
+      </div>
+
+      <div class="table-bar">
         <span class="table-meta">共 {{ totalTasks }} 条</span>
       </div>
 
@@ -346,7 +352,7 @@ void loadTasks()
     <el-dialog
       v-model="taskDialog.visible.value"
       :title="taskDialog.title.value"
-      width="640px"
+      width="560px"
       destroy-on-close
       @closed="closeTaskDialog"
     >
@@ -357,7 +363,7 @@ void loadTasks()
             v-model="form.title"
             type="text"
             maxlength="60"
-            placeholder="例如：补充 PostgreSQL CRUD 接口"
+            placeholder="例如：补齐 PostgreSQL CRUD 接口"
           />
         </label>
 
@@ -414,47 +420,90 @@ void loadTasks()
   gap: 1rem;
 }
 
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+.page-card {
+  padding: 1.1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
 }
 
-.filter-bar {
-  display: grid;
-  grid-template-columns: minmax(280px, 1fr) 180px;
-  gap: 0.75rem;
-  flex: 1;
+.section-label {
+  color: #2563eb;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-head h2 {
+  margin-top: 0.28rem;
+  color: #0f172a;
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+
+.page-copy {
+  margin-top: 0.48rem;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 .action-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
-.panel-head {
+.error-banner {
+  margin-top: 0.9rem;
+  padding: 0.88rem 1rem;
+  border-radius: 14px;
+  background: rgba(248, 113, 113, 0.08);
+  color: #dc2626;
+  border: 1px solid rgba(248, 113, 113, 0.16);
+  font-size: 0.88rem;
+}
+
+.filter-bar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 180px auto;
+  gap: 0.7rem;
+  margin-top: 0.95rem;
+}
+
+.table-bar {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 0.85rem;
+}
+
+.table-meta {
+  color: #64748b;
+  font-size: 0.84rem;
 }
 
 .task-table {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
   width: 100%;
 }
 
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 0.9rem;
 }
 
 .form-grid {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.85rem;
 }
 
 .dialog-form {
@@ -463,7 +512,20 @@ void loadTasks()
 
 .form-grid label {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.42rem;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  padding: 0.68rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #ffffff;
+  color: #0f172a;
 }
 
 .textarea-field {
@@ -473,21 +535,17 @@ void loadTasks()
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 @media (max-width: 1080px) {
-  .toolbar {
+  .panel-head {
     flex-direction: column;
     align-items: stretch;
   }
 
   .filter-bar {
     grid-template-columns: 1fr;
-  }
-
-  .action-bar {
-    justify-content: flex-start;
   }
 
   .pagination-wrap {

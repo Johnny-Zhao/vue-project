@@ -8,7 +8,7 @@ export const authRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       publicOnly: true,
-      title: 'Login',
+      title: '登录',
     },
   },
   {
@@ -17,7 +17,7 @@ export const authRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/ForbiddenView.vue'),
     meta: {
       requiresAuth: true,
-      title: '403 Forbidden',
+      title: '无权限访问',
     },
   },
 ]

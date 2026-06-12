@@ -19,7 +19,7 @@ export const systemRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/SqliteCrudPlaygroundView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Node SQLite CRUD',
+      title: 'SQLite CRUD',
       menu: true,
       menuOrder: 3,
       roles: ['admin', 'viewer'],
@@ -31,7 +31,7 @@ export const systemRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/PostgreSqlCrudPlayground/index.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Node PostgreSQL CRUD',
+      title: 'PostgreSQL CRUD',
       menu: true,
       menuOrder: 4,
       roles: ['admin', 'viewer'],
@@ -43,7 +43,7 @@ export const systemRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/AboutView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'TypeScript Notes',
+      title: 'TypeScript 笔记',
       menu: true,
       menuOrder: 5,
       roles: ['admin', 'viewer'],

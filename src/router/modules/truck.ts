@@ -7,7 +7,7 @@ export const truckRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/TruckListView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Truck List',
+      title: '车辆列表',
       menu: true,
       menuOrder: 4,
       roles: ['admin'],

@@ -16,10 +16,6 @@ const {
   loading,
   filterOptions,
   statusTextMap,
-  sortField,
-  sortDirection,
-  sortFieldOptions,
-  sortDirectionOptions,
   keyword,
   normalizedKeyword,
   searchedTasks,
@@ -48,17 +44,16 @@ const isViewerMode = computed(() => role.value === 'viewer')
 <template>
   <main class="dashboard">
     <section class="hero-card">
-      <div>
-        <p class="section-label">Weekly Focus</p>
-        <h2>Turn a TypeScript practice board into a permission-aware admin page.</h2>
+      <div class="hero-copy-block">
+        <p class="section-label">任务总览</p>
+        <h2>把练习项目整理成一个更像样的后台工作台</h2>
         <p class="hero-copy">
-          This page demonstrates how route access, menu visibility, and page-level actions can all
-          respond to the current role.
+          这里集中演示任务状态、权限差异、查询筛选和分页交互，适合一边看前端，一边对照后端链路。
         </p>
       </div>
 
       <div class="focus-box">
-        <span>Weekly Focus Hours</span>
+        <span>本周专注时长</span>
         <strong>{{ weeklyFocusHours }}h</strong>
         <div class="focus-actions">
           <button type="button" @click="addWeeklyFocusHours(-1)">-1h</button>
@@ -68,8 +63,12 @@ const isViewerMode = computed(() => role.value === 'viewer')
     </section>
 
     <div class="toolbar">
-      <el-button v-permission="'task:create'" type="primary" @click="handleDialogOpen">Create Task</el-button>
-      <div v-if="!canCreateTask" class="permission-note">Viewer role can browse tasks but cannot create or edit them.</div>
+      <el-button v-permission="'task:create'" type="primary" @click="handleDialogOpen">
+        新建任务
+      </el-button>
+      <div v-if="!canCreateTask" class="permission-note">
+        当前角色可浏览数据，但不能新增或编辑任务。
+      </div>
     </div>
 
     <section class="summary-grid">
@@ -84,8 +83,8 @@ const isViewerMode = computed(() => role.value === 'viewer')
       <article class="panel">
         <div class="panel-header">
           <div>
-            <p class="section-label">Task Board</p>
-            <h3>Shared task state with visible permission differences</h3>
+            <p class="section-label">任务列表</p>
+            <h3>统一状态管理下的任务面板</h3>
           </div>
 
           <div class="filter-group">
@@ -103,47 +102,17 @@ const isViewerMode = computed(() => role.value === 'viewer')
 
         <div class="control-bar">
           <div class="search-box">
-            <span>Search keyword</span>
-            <el-input
-              v-model="keyword"
-              clearable
-              placeholder="Search by title, summary, or category"
-            />
-          </div>
-
-          <div class="sort-bar">
-            <div class="sort-item">
-              <span>Sort field</span>
-              <el-select v-model="sortField" class="sort-select">
-                <el-option
-                  v-for="item in sortFieldOptions"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
-            </div>
-
-            <div class="sort-item">
-              <span>Sort direction</span>
-              <el-select v-model="sortDirection" class="sort-select">
-                <el-option
-                  v-for="item in sortDirectionOptions"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
-            </div>
+            <span>关键词</span>
+            <el-input v-model="keyword" clearable placeholder="按标题、摘要或分类搜索" />
           </div>
         </div>
 
         <div class="meta-line">
-          <span>Current keyword: {{ normalizedKeyword || 'None' }}</span>
-          <span>Visible tasks: {{ searchedTasks.length }}</span>
+          <span>当前关键词：{{ normalizedKeyword || '无' }}</span>
+          <span>可见任务：{{ searchedTasks.length }}</span>
         </div>
 
-        <div v-if="loading" class="loading-text">Loading tasks...</div>
+        <div v-if="loading" class="loading-text">任务加载中...</div>
 
         <ul class="task-list">
           <li
@@ -169,19 +138,36 @@ const isViewerMode = computed(() => role.value === 'viewer')
               <span class="hours">{{ task.estimateHours }}h</span>
 
               <div class="status-actions">
-                <button v-permission="'task:status:update'" type="button" @click.stop="markTask(task.id, 'todo')">
-                  Mark Todo
+                <button
+                  v-permission="'task:status:update'"
+                  type="button"
+                  @click.stop="markTask(task.id, 'todo')"
+                >
+                  设为待办
                 </button>
-                <button v-permission="'task:status:update'" type="button" @click.stop="markTask(task.id, 'doing')">
-                  Mark Doing
+                <button
+                  v-permission="'task:status:update'"
+                  type="button"
+                  @click.stop="markTask(task.id, 'doing')"
+                >
+                  设为进行中
                 </button>
-                <button v-permission="'task:status:update'" type="button" @click.stop="markTask(task.id, 'done')">
-                  Mark Done
+                <button
+                  v-permission="'task:status:update'"
+                  type="button"
+                  @click.stop="markTask(task.id, 'done')"
+                >
+                  设为完成
                 </button>
-                <button v-permission="'task:delete'" class="danger-button" type="button" @click.stop="handleTaskDelete(task.id)">
-                  Delete
+                <button
+                  v-permission="'task:delete'"
+                  class="danger-button"
+                  type="button"
+                  @click.stop="handleTaskDelete(task.id)"
+                >
+                  删除
                 </button>
-                <span v-if="isViewerMode" class="readonly-tip">Read-only role</span>
+                <span v-if="isViewerMode" class="readonly-tip">只读角色</span>
               </div>
             </div>
           </li>
@@ -202,28 +188,28 @@ const isViewerMode = computed(() => role.value === 'viewer')
 
       <aside class="panel side-panel">
         <div>
-          <p class="section-label">Permission Notes</p>
-          <h3>What this page is proving</h3>
+          <p class="section-label">权限说明</p>
+          <h3>这个页面在验证什么</h3>
         </div>
 
         <ul class="insight-list">
-          <li>`admin` can see task creation, editing, status updates, and delete actions.</li>
-          <li>`viewer` can still access shared summary data but only in read-only mode.</li>
-          <li>Route protection controls entry, while button visibility controls fine-grained actions.</li>
-          <li>This mirrors a common admin permission split between menu rights and operation rights.</li>
+          <li>`admin` 可以新增、编辑、改状态，也可以删除任务。</li>
+          <li>`viewer` 仍能看到共享数据，但页面保持只读。</li>
+          <li>路由权限控制入口，按钮权限控制更细粒度的操作。</li>
+          <li>这也是后台系统里很常见的菜单权限和操作权限拆分方式。</li>
         </ul>
 
         <div class="mini-stats">
           <div>
-            <span>Doing</span>
+            <span>进行中</span>
             <strong>{{ doingCount }}</strong>
           </div>
           <div>
-            <span>Todo</span>
+            <span>待办</span>
             <strong>{{ pendingCount }}</strong>
           </div>
           <div>
-            <span>Done</span>
+            <span>完成</span>
             <strong>{{ completedCount }}</strong>
           </div>
         </div>
@@ -231,76 +217,83 @@ const isViewerMode = computed(() => role.value === 'viewer')
     </section>
   </main>
 
-  <TaskDialog v-if="canCreateTask || canEditTask" v-model:show="dialogVisible" :mode="dialogMode" :task-id="dialogTaskId" />
+  <TaskDialog
+    v-if="canCreateTask || canEditTask"
+    v-model:show="dialogVisible"
+    :mode="dialogMode"
+    :task-id="dialogTaskId"
+  />
 </template>
 
 <style scoped>
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .hero-card,
 .panel,
 .summary-card {
-  border-radius: 28px;
-  border: 1px solid rgba(29, 59, 54, 0.1);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 18px 40px rgba(19, 35, 33, 0.08);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
 }
 
 .hero-card {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(260px, 1fr);
-  gap: 1rem;
-  padding: 1.75rem;
+  grid-template-columns: minmax(0, 1.9fr) 220px;
+  gap: 0.9rem;
+  padding: 1.2rem;
 }
 
 .section-label {
-  color: #7a5d2d;
+  color: #2563eb;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 700;
 }
 
 .hero-card h2,
 .panel h3 {
-  margin-top: 0.4rem;
-  color: #16302f;
-  font-size: 1.6rem;
+  margin-top: 0.28rem;
+  color: #0f172a;
+  font-size: 1.18rem;
   font-weight: 700;
 }
 
 .hero-copy {
   max-width: 42rem;
-  margin-top: 0.75rem;
-  color: #4d5a58;
+  margin-top: 0.55rem;
+  color: #64748b;
+  font-size: 0.92rem;
 }
 
 .focus-box {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1.25rem;
-  border-radius: 24px;
-  background: linear-gradient(180deg, #fcf2df, #f2dfbd);
+  padding: 1rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #eff6ff, #dbeafe);
 }
 
 .focus-box span {
-  color: #7a5d2d;
+  color: #2563eb;
+  font-size: 0.82rem;
 }
 
 .focus-box strong {
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 700;
-  color: #173937;
+  color: #0f172a;
 }
 
 .focus-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .focus-actions button,
@@ -310,15 +303,17 @@ const isViewerMode = computed(() => role.value === 'viewer')
   cursor: pointer;
   transition:
     transform 0.2s ease,
-    background-color 0.2s ease;
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .focus-actions button {
   flex: 1;
-  padding: 0.8rem 0;
+  padding: 0.62rem 0;
   border-radius: 999px;
-  background: #173937;
-  color: #fff8ef;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.84rem;
 }
 
 .toolbar {
@@ -327,120 +322,110 @@ const isViewerMode = computed(() => role.value === 'viewer')
 }
 
 .permission-note {
-  padding: 0.75rem 1rem;
+  padding: 0.56rem 0.88rem;
   border-radius: 999px;
-  background: #efe5d1;
-  color: #7a5d2d;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: #64748b;
+  font-size: 0.84rem;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .summary-card {
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
 .summary-card span,
 .summary-card p {
-  color: #56615f;
+  color: #64748b;
+  font-size: 0.84rem;
 }
 
 .summary-card strong {
   display: block;
-  margin: 0.35rem 0 0.5rem;
-  font-size: 2rem;
-  color: #173937;
+  margin: 0.28rem 0 0.4rem;
+  font-size: 1.55rem;
+  color: #0f172a;
   font-weight: 700;
 }
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) 280px;
+  gap: 0.9rem;
 }
 
 .panel {
-  padding: 1.5rem;
+  padding: 1.15rem;
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.9rem;
   align-items: flex-start;
 }
 
 .filter-group {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
 }
 
 .filter-group button {
-  padding: 0.65rem 0.9rem;
+  padding: 0.48rem 0.78rem;
   border-radius: 999px;
-  background: #edf2ef;
-  color: #36514d;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: #475569;
+  font-size: 0.84rem;
 }
 
 .filter-group button.active {
-  background: #163f38;
-  color: #fff8ef;
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
 }
 
 .control-bar {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.9rem;
+  margin-top: 0.9rem;
   flex-wrap: wrap;
 }
 
 .search-box {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  min-width: 280px;
+  gap: 0.4rem;
+  min-width: 260px;
   flex: 1;
 }
 
 .search-box span,
-.sort-item span,
 .meta-line {
-  color: #56615f;
-  font-size: 0.9rem;
-}
-
-.sort-bar {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.sort-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.sort-select {
-  width: 160px;
+  color: #64748b;
+  font-size: 0.84rem;
 }
 
 .meta-line {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 0.85rem;
   flex-wrap: wrap;
 }
 
 .loading-text {
-  margin-top: 1rem;
-  color: #7a5d2d;
+  margin-top: 0.9rem;
+  color: #2563eb;
+  font-size: 0.84rem;
 }
 
 .task-list,
@@ -450,17 +435,18 @@ const isViewerMode = computed(() => role.value === 'viewer')
 
 .task-list {
   display: grid;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 0.8rem;
+  margin-top: 1rem;
 }
 
 .task-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 1rem;
-  padding: 1.1rem;
-  border-radius: 22px;
-  background: #f6f8f7;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: #f8fafc;
   cursor: pointer;
 }
 
@@ -469,20 +455,21 @@ const isViewerMode = computed(() => role.value === 'viewer')
 }
 
 .task-main h4 {
-  margin-top: 0.5rem;
-  color: #193735;
-  font-size: 1.1rem;
+  margin-top: 0.45rem;
+  color: #0f172a;
+  font-size: 1rem;
   font-weight: 700;
 }
 
 .task-main p {
-  margin-top: 0.45rem;
-  color: #5a6664;
+  margin-top: 0.38rem;
+  color: #64748b;
+  font-size: 0.88rem;
 }
 
 .task-meta {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -494,13 +481,13 @@ const isViewerMode = computed(() => role.value === 'viewer')
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.8rem;
+  padding: 0.24rem 0.62rem;
+  font-size: 0.74rem;
 }
 
 .category {
-  background: #d8ede8;
-  color: #1b5d53;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .priority {
@@ -508,83 +495,85 @@ const isViewerMode = computed(() => role.value === 'viewer')
 }
 
 .priority[data-priority='high'] {
-  background: #fde1cf;
-  color: #a4511b;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .priority[data-priority='medium'] {
-  background: #efe7ff;
-  color: #5d38a5;
+  background: #ede9fe;
+  color: #6d28d9;
 }
 
 .priority[data-priority='low'] {
-  background: #dce9ff;
-  color: #2753a6;
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .task-side {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .status-badge[data-status='todo'] {
-  background: #f8e7d8;
-  color: #8e4b18;
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .status-badge[data-status='doing'] {
-  background: #dceaff;
-  color: #2a5698;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .status-badge[data-status='done'] {
-  background: #d8f1e1;
-  color: #1a6c45;
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .hours {
-  background: #ebeef0;
-  color: #4d5a58;
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .status-actions {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.4rem;
   width: 100%;
 }
 
 .status-actions button {
   width: 100%;
-  padding: 0.65rem 0.75rem;
-  border-radius: 14px;
-  background: white;
-  color: #244946;
-  border: 1px solid rgba(29, 59, 54, 0.08);
+  padding: 0.54rem 0.72rem;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  font-size: 0.82rem;
 }
 
 .danger-button {
-  background: #fde7e2;
-  color: #b6422a;
+  background: #fff1f2;
+  color: #be123c;
 }
 
 .readonly-tip {
   display: inline-flex;
   justify-content: center;
   width: 100%;
-  padding: 0.65rem 0.75rem;
-  border-radius: 14px;
-  background: #efe5d1;
-  color: #7a5d2d;
-  font-size: 0.85rem;
+  padding: 0.54rem 0.72rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1.25rem;
+  margin-top: 1rem;
 }
 
 .status-actions button:hover,
@@ -597,38 +586,40 @@ const isViewerMode = computed(() => role.value === 'viewer')
 .side-panel {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .insight-list {
   display: grid;
-  gap: 0.85rem;
-  color: #4e5958;
+  gap: 0.7rem;
+  color: #64748b;
+  font-size: 0.88rem;
 }
 
 .mini-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .mini-stats div {
-  padding: 1rem;
-  border-radius: 18px;
-  background: #f3eee4;
+  padding: 0.82rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .mini-stats span {
-  color: #7a5d2d;
-  font-size: 0.82rem;
+  color: #64748b;
+  font-size: 0.76rem;
 }
 
 .mini-stats strong {
   display: block;
-  margin-top: 0.2rem;
-  font-size: 1.6rem;
+  margin-top: 0.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #173937;
+  color: #0f172a;
 }
 
 @media (max-width: 960px) {
@@ -645,8 +636,6 @@ const isViewerMode = computed(() => role.value === 'viewer')
 
   .panel-header,
   .control-bar,
-  .sort-bar,
-  .sort-item,
   .meta-line {
     flex-direction: column;
   }

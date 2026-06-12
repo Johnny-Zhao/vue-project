@@ -1,8 +1,8 @@
 :root {
-  --color-background: #f4efe7;
-  --color-background-soft: rgba(255, 255, 255, 0.72);
-  --color-heading: #173937;
-  --color-text: #364543;
+  --color-background: #f3f6fb;
+  --color-background-soft: rgba(255, 255, 255, 0.78);
+  --color-heading: #0f172a;
+  --color-text: #475569;
 }
 
 *,
@@ -13,26 +13,26 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 body {
   min-height: 100vh;
   color: var(--color-text);
   background:
-    radial-gradient(circle at top right, rgba(230, 179, 105, 0.32), transparent 18%),
-    linear-gradient(180deg, #f8f4ee 0%, #f2ebe0 48%, #ede5d8 100%);
-  line-height: 1.6;
-  font-family:
-    'Segoe UI',
-    'PingFang SC',
-    'Microsoft YaHei',
-    sans-serif;
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f2f5fa 45%, #edf2f7 100%);
+  line-height: 1.55;
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-button {
+body,
+button,
+input,
+textarea,
+select {
   font: inherit;
 }

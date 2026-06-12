@@ -56,6 +56,11 @@ type TableSortState = {
   order: TableSortOrder
 }
 
+const sortState = reactive<TableSortState>({
+  prop: null,
+  order: null,
+})
+
 function fillForm(task: TutorialTask) {
   form.title = task.title
   form.status = task.status
@@ -203,11 +208,6 @@ function handleTableRowClick(row: TutorialTask) {
   void handleSelectTask(row.id)
 }
 
-const sortState = reactive<TableSortState>({
-  prop: null,
-  order: null,
-})
-
 function handleSortChange(payload: {
   column: unknown
   prop: keyof TutorialTask | null
@@ -284,42 +284,37 @@ onMounted(() => {
 
 <template>
   <section class="crud-page">
-    <header class="page-card hero-card">
+    <header class="page-card intro-card">
       <div>
         <p class="section-label">Node + SQLite</p>
-        <h2>用真实数据库走一遍 Express 增删改查</h2>
-        <p class="hero-copy">
-          这个页面对应一套真实的 SQLite CRUD 接口。你可以一边操作任务，一边对照后端的 `middleware /
-          controller / service / repository / database` 分层。
+        <h2>用真实数据库走通一套增删改查</h2>
+        <p class="intro-copy">
+          这个页面一边请求 SQLite 接口，一边帮助你对照后端分层和查询、排序、分页这些常见逻辑。
         </p>
       </div>
 
-      <div class="hero-actions">
-        <el-button :loading="loading" type="primary" @click="loadTasks({ resetPage: true })">
-          刷新任务列表
-        </el-button>
-        <el-button type="success" @click="openCreateDialog">新建任务</el-button>
+      <div class="intro-actions">
+        <el-button :loading="loading" @click="loadTasks({ resetPage: true })">刷新列表</el-button>
+        <el-button type="primary" @click="openCreateDialog">新建任务</el-button>
       </div>
     </header>
 
     <div v-if="requestError" class="error-banner">{{ requestError }}</div>
 
-    <div v-if="guide" class="guide-grid">
-      <article class="page-card panel">
+    <section v-if="guide" class="guide-grid">
+      <article class="page-card guide-card">
         <p class="section-label">请求流程</p>
         <h3>{{ guide.title }}</h3>
-        <p class="panel-copy">{{ guide.summary }}</p>
-
+        <p class="guide-copy">{{ guide.summary }}</p>
         <ol class="ordered-list">
           <li v-for="step in guide.flowSteps" :key="step">{{ step }}</li>
         </ol>
       </article>
 
-      <article class="page-card panel">
+      <article class="page-card guide-card">
         <p class="section-label">中间件</p>
-        <h3>为什么这几个 middleware 要先执行</h3>
-
-        <ul class="middle-list">
+        <h3>先执行这些校验和上下文处理</h3>
+        <ul class="info-list">
           <li v-for="item in guide.middlewares" :key="item.name">
             <strong>{{ item.name }}</strong>
             <span>{{ item.role }}</span>
@@ -327,11 +322,10 @@ onMounted(() => {
         </ul>
       </article>
 
-      <article class="page-card panel">
+      <article class="page-card guide-card">
         <p class="section-label">接口清单</p>
-        <h3>前端当前会用到这些接口</h3>
-
-        <ul class="endpoint-list">
+        <h3>前端当前会用到的接口</h3>
+        <ul class="info-list endpoint-list">
           <li v-for="item in guide.endpoints" :key="`${item.method}-${item.path}`">
             <code>{{ item.method }} {{ item.path }}</code>
             <span>{{ item.description }}</span>
@@ -339,10 +333,9 @@ onMounted(() => {
         </ul>
       </article>
 
-      <article class="page-card panel">
+      <article class="page-card guide-card">
         <p class="section-label">数据库</p>
         <h3>SQLite 文件和表结构</h3>
-
         <div class="meta-list">
           <span><strong>引擎：</strong>{{ guide.database.engine }}</span>
           <span v-if="guide.database.command"
@@ -352,94 +345,94 @@ onMounted(() => {
           <span class="db-path"><strong>文件：</strong>{{ guide.database.file }}</span>
         </div>
       </article>
-    </div>
+    </section>
 
-    <div class="workspace-grid single-column">
-      <article class="page-card panel">
-        <div class="panel-head">
-          <div>
-            <p class="section-label">SQLite 任务列表</p>
-            <h3>直接请求 `/api/tutorial/tasks`</h3>
-          </div>
-          <span class="table-meta">共 {{ totalTasks }} 条</span>
+    <article class="page-card workspace-card">
+      <div class="workspace-head">
+        <div>
+          <p class="section-label">任务列表</p>
+          <h3>直接请求 `/api/tutorial/tasks`</h3>
         </div>
+        <span class="table-meta">共 {{ totalTasks }} 条</span>
+      </div>
 
-        <div class="filter-bar">
-          <input v-model="keyword" type="text" placeholder="按标题 / 负责人 / 描述搜索" />
-          <select v-model="statusFilter">
-            <option value="all">全部状态</option>
-            <option value="todo">todo</option>
-            <option value="doing">doing</option>
-            <option value="done">done</option>
-          </select>
-          <el-button :loading="loading" @click="loadTasks({ resetPage: true })">筛选</el-button>
-        </div>
+      <div class="filter-bar">
+        <el-input v-model="keyword" clearable placeholder="按标题、负责人或描述搜索" />
+        <el-select v-model="statusFilter" placeholder="状态">
+          <el-option label="全部状态" value="all" />
+          <el-option label="todo" value="todo" />
+          <el-option label="doing" value="doing" />
+          <el-option label="done" value="done" />
+        </el-select>
+        <el-button :loading="loading" type="primary" @click="loadTasks({ resetPage: true })">
+          查询
+        </el-button>
+      </div>
 
-        <el-table
-          v-loading="loading"
-          class="task-table"
-          :data="tasks"
-          row-key="id"
-          stripe
-          border
-          empty-text="暂无任务"
-          :row-class-name="tableRowClassName"
-          @row-click="handleTableRowClick"
-          @sort-change="handleSortChange"
-        >
-          <el-table-column
-            prop="title"
-            label="标题"
-            min-width="180"
-            show-overflow-tooltip
-            sortable="custom"
-          />
-          <el-table-column label="描述" min-width="220" show-overflow-tooltip sortable="custom">
-            <template #default="{ row }">
-              {{ row.description || '暂无描述' }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="88" sortable="custom" />
-          <el-table-column prop="priority" label="优先级" width="96" sortable="custom" />
-          <el-table-column label="负责人" width="120" show-overflow-tooltip sortable="custom">
-            <template #default="{ row }">
-              {{ row.assignee || '未分配' }}
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="140" fixed="right" align="center">
-            <template #default="{ row }">
-              <el-button link type="primary" @click.stop="handleSelectTask(row.id)">编辑</el-button>
-              <el-button
-                link
-                type="danger"
-                :loading="deletingId === row.id"
-                @click.stop="handleDelete(row)"
-              >
-                删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+      <el-table
+        v-loading="loading"
+        class="task-table"
+        :data="tasks"
+        row-key="id"
+        stripe
+        border
+        empty-text="暂无任务"
+        :row-class-name="tableRowClassName"
+        @row-click="handleTableRowClick"
+        @sort-change="handleSortChange"
+      >
+        <el-table-column
+          prop="title"
+          label="标题"
+          min-width="180"
+          show-overflow-tooltip
+          sortable="custom"
+        />
+        <el-table-column label="描述" min-width="220" show-overflow-tooltip sortable="custom">
+          <template #default="{ row }">
+            {{ row.description || '暂无描述' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="88" sortable="custom" />
+        <el-table-column prop="priority" label="优先级" width="96" sortable="custom" />
+        <el-table-column label="负责人" width="120" show-overflow-tooltip sortable="custom">
+          <template #default="{ row }">
+            {{ row.assignee || '未分配' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" @click.stop="handleSelectTask(row.id)">编辑</el-button>
+            <el-button
+              link
+              type="danger"
+              :loading="deletingId === row.id"
+              @click.stop="handleDelete(row)"
+            >
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-        <div class="pagination-wrap">
-          <el-pagination
-            :current-page="currentPage"
-            :page-size="pageSize"
-            :page-sizes="[5, 10, 20]"
-            :total="totalTasks"
-            background
-            layout="total, sizes, prev, pager, next"
-            @current-change="handlePageChange"
-            @size-change="handlePageSizeChange"
-          />
-        </div>
-      </article>
-    </div>
+      <div class="pagination-wrap">
+        <el-pagination
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :page-sizes="[5, 10, 20]"
+          :total="totalTasks"
+          background
+          layout="total, sizes, prev, pager, next"
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
+        />
+      </div>
+    </article>
 
     <el-dialog
       v-model="taskDialog.visible.value"
       :title="taskDialog.title.value"
-      width="640px"
+      width="560px"
       destroy-on-close
       @closed="closeTaskDialog"
     >
@@ -450,7 +443,7 @@ onMounted(() => {
             v-model="form.title"
             type="text"
             maxlength="60"
-            placeholder="例如：补全 SQLite CRUD 接口"
+            placeholder="例如：补齐 SQLite CRUD 接口"
           />
         </label>
 
@@ -483,7 +476,7 @@ onMounted(() => {
             v-model="form.description"
             rows="5"
             maxlength="300"
-            placeholder="写一点任务背景，方便你观察数据库字段是怎么被更新的"
+            placeholder="写一点任务背景，方便观察数据库字段如何被修改"
           />
         </label>
       </div>
@@ -508,107 +501,98 @@ onMounted(() => {
 }
 
 .page-card {
-  padding: 1.5rem;
-  border-radius: 28px;
-  border: 1px solid rgba(29, 59, 54, 0.1);
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 18px 40px rgba(19, 35, 33, 0.08);
-}
-
-.hero-card,
-.guide-grid,
-.workspace-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.hero-card {
-  grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
-}
-
-.guide-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.workspace-grid {
-  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.25fr);
-}
-
-.single-column {
-  grid-template-columns: 1fr;
+  padding: 1.1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
 }
 
 .section-label {
-  color: #7a5d2d;
+  color: #2563eb;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 700;
 }
 
-.hero-card h2,
-.panel h3 {
-  margin-top: 0.35rem;
-  color: #173937;
-  font-size: 1.55rem;
-  font-weight: 700;
-}
-
-.hero-copy,
-.panel-copy {
-  margin-top: 0.75rem;
-  color: #566260;
-  line-height: 1.6;
-}
-
-.hero-actions {
+.intro-card {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.intro-card h2,
+.guide-card h3,
+.workspace-card h3 {
+  margin-top: 0.28rem;
+  color: #0f172a;
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+
+.intro-copy,
+.guide-copy {
+  margin-top: 0.5rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
 }
 
 .error-banner {
-  padding: 1rem 1.25rem;
-  border-radius: 18px;
-  background: rgba(245, 108, 108, 0.12);
-  color: #c45656;
-  border: 1px solid rgba(245, 108, 108, 0.18);
+  padding: 0.88rem 1rem;
+  border-radius: 14px;
+  background: rgba(248, 113, 113, 0.08);
+  color: #dc2626;
+  border: 1px solid rgba(248, 113, 113, 0.16);
+  font-size: 0.88rem;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
 }
 
 .ordered-list,
-.middle-list,
-.endpoint-list {
-  margin-top: 1rem;
-  padding-left: 1.2rem;
+.info-list {
+  margin-top: 0.9rem;
+  padding-left: 1.1rem;
   display: grid;
-  gap: 0.75rem;
-  color: #4e5958;
+  gap: 0.6rem;
+  color: #64748b;
+  font-size: 0.88rem;
 }
 
-.middle-list li,
-.endpoint-list li {
+.info-list li {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.18rem;
 }
 
-.middle-list strong,
+.info-list strong,
 .endpoint-list code {
-  color: #173937;
+  color: #0f172a;
 }
 
 .meta-list {
-  margin-top: 1rem;
+  margin-top: 0.9rem;
   display: grid;
-  gap: 0.75rem;
-  color: #566260;
+  gap: 0.6rem;
+  color: #64748b;
+  font-size: 0.88rem;
 }
 
 .db-path {
   word-break: break-all;
 }
 
-.panel-head {
+.workspace-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -616,51 +600,19 @@ onMounted(() => {
 }
 
 .table-meta {
-  color: #6a7472;
-  font-size: 0.9rem;
-}
-
-.form-grid {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.dialog-form {
-  margin-top: 0;
-}
-
-.form-grid label {
-  display: grid;
-  gap: 0.45rem;
-  color: #566260;
-}
-
-.form-grid input,
-.form-grid select,
-.form-grid textarea,
-.filter-bar input,
-.filter-bar select {
-  width: 100%;
-  padding: 0.75rem 0.85rem;
-  border-radius: 14px;
-  border: 1px solid rgba(29, 59, 54, 0.12);
-  background: white;
-  color: #173937;
-}
-
-.textarea-field {
-  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 0.84rem;
 }
 
 .filter-bar {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) 180px auto;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
 }
 
 .task-table {
-  margin-top: 1rem;
+  margin-top: 0.9rem;
   width: 100%;
 }
 
@@ -669,33 +621,67 @@ onMounted(() => {
 }
 
 :deep(.task-table .task-row-active > td.el-table__cell) {
-  background-color: rgba(27, 93, 83, 0.08) !important;
+  background-color: rgba(37, 99, 235, 0.08) !important;
 }
 
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 0.9rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.dialog-form {
+  margin-top: 0;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 0.42rem;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  padding: 0.68rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.textarea-field {
+  grid-column: 1 / -1;
 }
 
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 @media (max-width: 1080px) {
-  .hero-card,
-  .guide-grid,
-  .workspace-grid {
+  .intro-card,
+  .guide-grid {
     grid-template-columns: 1fr;
+  }
+
+  .intro-card {
+    flex-direction: column;
   }
 
   .filter-bar {
     grid-template-columns: 1fr;
   }
 
-  .panel-head {
+  .workspace-head {
     flex-direction: column;
     align-items: flex-start;
   }
