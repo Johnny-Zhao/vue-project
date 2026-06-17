@@ -1,12 +1,20 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { loginApi } from './api'
+import { fetchCurrentSessionApi, loginApi } from './api'
 import { getRolePermissions } from './permissions'
-import { clearStoredSession, isSessionExpired, persistSession, readStoredSession } from './session'
-import type { AppPermission, LoginPayload, UserRole } from './types'
+import {
+  clearStoredSession,
+  getStoredSessionPersistence,
+  isSessionExpired,
+  persistSession,
+  readStoredSession,
+} from './session'
+import type { AppPermission, AuthSession, LoginPayload, UserRole } from './types'
 
 export const useAuthStore = defineStore('auth', () => {
-  const session = ref(readStoredSession())
+  const session = ref<AuthSession | null>(readStoredSession())
+  const sessionRemember = ref(false)
+  const sessionHydrated = ref(false)
 
   const user = computed(() => session.value?.user ?? null)
   const token = computed(() => session.value?.accessToken ?? '')
@@ -14,26 +22,49 @@ export const useAuthStore = defineStore('auth', () => {
   const permissions = computed<AppPermission[]>(() => getRolePermissions(role.value))
   const isAuthenticated = computed(() => Boolean(session.value))
 
-  function hydrateSession() {
+  function updateSession(nextSession: AuthSession | null, remember = sessionRemember.value) {
+    session.value = nextSession
+
+    if (nextSession) {
+      sessionRemember.value = remember
+      persistSession(nextSession, remember)
+      return
+    }
+
+    sessionRemember.value = false
+    clearStoredSession()
+  }
+
+  async function hydrateSession() {
     const nextSession = readStoredSession()
-    if (nextSession && isSessionExpired(nextSession)) {
-      logout()
+
+    if (!nextSession || isSessionExpired(nextSession)) {
+      updateSession(null, false)
+      sessionHydrated.value = true
       return
     }
 
     session.value = nextSession
+    sessionRemember.value = getStoredSessionPersistence() === 'local'
+
+    try {
+      const verifiedSession = await fetchCurrentSessionApi()
+      updateSession(verifiedSession, sessionRemember.value)
+    } catch {
+      updateSession(null, false)
+    } finally {
+      sessionHydrated.value = true
+    }
   }
 
   async function login(payload: LoginPayload) {
     const nextSession = await loginApi(payload)
-    persistSession(nextSession, payload.remember)
-    session.value = nextSession
+    updateSession(nextSession, payload.remember)
     return nextSession
   }
 
   function logout() {
-    clearStoredSession()
-    session.value = null
+    updateSession(null, false)
   }
 
   function hasRole(allowedRoles: UserRole | UserRole[]) {
@@ -56,6 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
     role,
     permissions,
     isAuthenticated,
+    sessionHydrated,
     hydrateSession,
     login,
     logout,

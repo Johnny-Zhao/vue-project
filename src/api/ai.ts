@@ -9,7 +9,6 @@ export async function generateTruckAssistApi(payload: TruckAiAssistDto) {
     method: 'POST',
     data: payload,
     baseURL: AI_API_BASE_URL,
-    auth: false,
     suppressGlobalErrorMessage: true,
   })
 }

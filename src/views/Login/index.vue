@@ -22,8 +22,8 @@ const formData = reactive<LoginForm>({
 })
 
 const formRules = {
-  username: [{ required: true, message: 'Please enter a username', trigger: 'blur' }],
-  password: [{ required: true, message: 'Please enter a password', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
 async function handleLogin() {
@@ -62,7 +62,8 @@ async function handleLogin() {
         <p class="eyebrow">Ops Console</p>
         <h1>Make request handling, auth, and route protection feel like one coherent system.</h1>
         <p class="hero-copy">
-          The login form is fake, but token storage, 401 redirects, unified prompts, and protected routes are wired for real.
+          The login now calls the backend for real, and the rest of the app still uses unified token
+          storage, 401 redirects, and protected routes.
         </p>
 
         <div class="hero-pills">
@@ -72,41 +73,51 @@ async function handleLogin() {
         </div>
 
         <div class="demo-note">
-          <strong>Demo Accounts</strong>
-          <p><code>admin / 123456</code> signs in successfully.</p>
-          <p><code>viewer / 123456</code> signs in with a read-only menu.</p>
-          <p><code>forbidden / 123456</code> returns a 403 permission prompt.</p>
+          <strong>演示账号</strong>
+          <p><code>admin / 123456</code>：管理员权限。</p>
+          <p><code>viewer / 123456</code>：只读菜单。</p>
+          <p>账号来自 PostgreSQL 的 <code>app_users</code> 表。</p>
         </div>
       </div>
 
       <div class="form-panel">
         <div class="panel-head">
           <p class="panel-label">Sign In</p>
-          <h2>Enter the admin demo</h2>
+          <h2>登录后台系统</h2>
         </div>
 
-        <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top" class="login-form">
-          <el-form-item label="Username" prop="username">
-            <el-input v-model="formData.username" placeholder="Use admin, viewer, or forbidden" clearable />
+        <el-form
+          ref="formRef"
+          :model="formData"
+          :rules="formRules"
+          label-position="top"
+          class="login-form"
+        >
+          <el-form-item label="用户名" prop="username">
+            <el-input
+              v-model="formData.username"
+              placeholder="请输入用户名，例如 admin"
+              clearable
+            />
           </el-form-item>
 
-          <el-form-item label="Password" prop="password">
+          <el-form-item label="密码" prop="password">
             <el-input
               v-model="formData.password"
               type="password"
               show-password
-              placeholder="Enter any non-empty password"
+              placeholder="请输入登录密码"
               @keyup.enter="handleLogin"
             />
           </el-form-item>
 
           <div class="form-meta">
-            <el-checkbox v-model="formData.remember">Remember this session</el-checkbox>
-            <span>Session expires after 30 minutes</span>
+            <el-checkbox v-model="formData.remember">记住登录状态</el-checkbox>
+            <span>登录有效期 30 分钟</span>
           </div>
 
           <el-button type="primary" class="submit-button" :loading="loading" @click="handleLogin">
-            Sign In
+            登录
           </el-button>
         </el-form>
       </div>

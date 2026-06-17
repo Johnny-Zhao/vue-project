@@ -3,11 +3,13 @@ declare module 'express' {
     body: unknown
     query: Record<string, string | undefined>
     params: Record<string, string>
+    headers: Record<string, string | string[] | undefined>
     method: string
     originalUrl: string
     requestId?: string
     requestStartedAt?: number
     validatedBody?: unknown
+    authUser?: import('./auth').AuthenticatedUser
     is(type: string): boolean
     [key: string]: unknown
   }

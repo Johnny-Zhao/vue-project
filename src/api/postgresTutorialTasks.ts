@@ -15,7 +15,6 @@ export function fetchPostgresTutorialGuideApi() {
     url: '/tutorial/guide',
     method: 'GET',
     baseURL: PG_TUTORIAL_BASE_URL,
-    auth: false,
   })
 }
 
@@ -25,7 +24,6 @@ export function fetchPostgresTutorialTasksApi(params?: TutorialTaskQuery) {
     method: 'GET',
     params,
     baseURL: PG_TUTORIAL_BASE_URL,
-    auth: false,
   })
 }
 
@@ -34,7 +32,6 @@ export function fetchPostgresTutorialTaskDetailApi(id: number) {
     url: `/tutorial/tasks/${id}`,
     method: 'GET',
     baseURL: PG_TUTORIAL_BASE_URL,
-    auth: false,
   })
 }
 
@@ -44,7 +41,6 @@ export function createPostgresTutorialTaskApi(payload: TutorialTaskPayload) {
     method: 'POST',
     data: payload,
     baseURL: PG_TUTORIAL_BASE_URL,
-    auth: false,
   })
 }
 
@@ -54,7 +50,6 @@ export function updatePostgresTutorialTaskApi(id: number, payload: TutorialTaskP
     method: 'PUT',
     data: payload,
     baseURL: PG_TUTORIAL_BASE_URL,
-    auth: false,
   })
 }
 
@@ -63,6 +58,5 @@ export function deletePostgresTutorialTaskApi(id: number) {
     url: `/tutorial/tasks/${id}`,
     method: 'DELETE',
     baseURL: PG_TUTORIAL_BASE_URL,
-    auth: false,
   })
 }

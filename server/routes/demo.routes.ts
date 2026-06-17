@@ -6,8 +6,11 @@ import {
   getTasks,
   postEcho,
 } from '../controllers/demo.controller.ts'
+import { authorize, requireAuth } from '../middleware/auth.ts'
 
 export const demoRouter = Router()
+
+demoRouter.use(requireAuth, authorize({ roles: ['admin', 'viewer'] }))
 
 demoRouter.get('/overview', getOverview)
 demoRouter.get('/structure', getStructure)

@@ -13,6 +13,8 @@ dotenv.config({
 export interface ServerEnv {
   nodeEnv: string
   port: number
+  authJwtSecret: string
+  authJwtExpiresMinutes: number
   sqliteDbPath: string
   postgresHost: string
   postgresPort: number
@@ -30,6 +32,8 @@ export interface ServerEnv {
 export const env: ServerEnv = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT || 3001),
+  authJwtSecret: process.env.AUTH_JWT_SECRET || 'dev-only-jwt-secret-change-me',
+  authJwtExpiresMinutes: Number(process.env.AUTH_JWT_EXPIRES_MINUTES || 30),
   sqliteDbPath: process.env.SQLITE_DB_PATH || path.join(serverRoot, 'data', 'tutorial.sqlite'),
   postgresHost: process.env.POSTGRES_HOST || '127.0.0.1',
   postgresPort: Number(process.env.POSTGRES_PORT || 5432),

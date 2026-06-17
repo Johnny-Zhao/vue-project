@@ -1,60 +1,25 @@
-import {
-  createApiFailureResponse,
-  createApiSuccessResponse,
-  mockApiRequest,
-} from '@/api/request'
-import type { LoginPayload, AuthSession, AuthUser } from './types'
+import { requestApi } from '@/api/request'
+import type { AuthSession, LoginPayload } from './types'
 
-const SESSION_DURATION_MS = 30 * 60 * 1000
-
-function createUser(username: string): AuthUser {
-  const normalizedUsername = username.trim().toLowerCase()
-
-  if (normalizedUsername === 'viewer') {
-    return {
-      id: 2,
-      name: 'Viewer User',
-      role: 'viewer',
-    }
-  }
-
-  return {
-    id: 1,
-    name: normalizedUsername === 'admin' ? 'Admin User' : username.trim(),
-    role: 'admin',
-  }
-}
-
-function createSession(username: string): AuthSession {
-  const tokenSeed = `${username}-${Date.now()}`
-
-  return {
-    accessToken: `access-${tokenSeed}`,
-    refreshToken: `refresh-${tokenSeed}`,
-    expiresAt: Date.now() + SESSION_DURATION_MS,
-    user: createUser(username),
-  }
-}
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export async function loginApi(payload: LoginPayload) {
-  return mockApiRequest(
-    () => {
-      const username = payload.username.trim()
-      const password = payload.password.trim()
-
-      if (!username || !password) {
-        return createApiFailureResponse(400, '请输入用户名和密码')
-      }
-
-      if (username.toLowerCase() === 'forbidden') {
-        return createApiFailureResponse(403, '当前账号没有后台访问权限')
-      }
-
-      return createApiSuccessResponse(createSession(username), '登录成功')
+  return requestApi<AuthSession, { username: string; password: string }>({
+    url: '/auth/login',
+    method: 'POST',
+    data: {
+      username: payload.username,
+      password: payload.password,
     },
-    {
-      auth: false,
-      delay: 450,
-    },
-  )
+    baseURL: API_BASE_URL,
+    auth: false,
+  })
+}
+
+export async function fetchCurrentSessionApi() {
+  return requestApi<AuthSession>({
+    url: '/auth/me',
+    method: 'GET',
+    baseURL: API_BASE_URL,
+  })
 }

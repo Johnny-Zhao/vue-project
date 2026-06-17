@@ -15,8 +15,6 @@ const authStore = useAuthStore(pinia)
 
 document.title = import.meta.env.VITE_APP_TITLE
 
-authStore.hydrateSession()
-
 setUnauthorizedHandler(() => {
   authStore.logout()
 
@@ -34,5 +32,7 @@ app.use(ElementPlus)
 app.use(pinia)
 app.use(router)
 installPermissionDirective(app)
+
+await authStore.hydrateSession()
 
 app.mount('#app')

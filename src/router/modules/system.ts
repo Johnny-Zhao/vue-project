@@ -38,6 +38,19 @@ export const systemRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/user-management',
+    name: 'userManagement',
+    component: () => import('@/views/UserManagementView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '用户管理',
+      menu: true,
+      menuOrder: 5,
+      roles: ['admin'],
+      permissions: ['user:manage'],
+    },
+  },
+  {
     path: '/about',
     name: 'about',
     component: () => import('@/views/AboutView.vue'),
@@ -45,7 +58,7 @@ export const systemRoutes: RouteRecordRaw[] = [
       requiresAuth: true,
       title: 'TypeScript 笔记',
       menu: true,
-      menuOrder: 5,
+      menuOrder: 6,
       roles: ['admin', 'viewer'],
     },
   },

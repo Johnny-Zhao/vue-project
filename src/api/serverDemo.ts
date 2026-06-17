@@ -13,7 +13,6 @@ export function fetchExpressOverviewApi() {
     url: '/demo/overview',
     method: 'GET',
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -22,7 +21,6 @@ export function fetchExpressStructureApi() {
     url: '/demo/structure',
     method: 'GET',
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -31,7 +29,6 @@ export function fetchDemoTasksApi() {
     url: '/demo/tasks',
     method: 'GET',
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -40,7 +37,6 @@ export function fetchDemoTaskDetailApi(id: number) {
     url: `/demo/tasks/${id}`,
     method: 'GET',
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -50,6 +46,5 @@ export function postEchoPayloadApi(payload: Record<string, unknown>) {
     method: 'POST',
     data: payload,
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }

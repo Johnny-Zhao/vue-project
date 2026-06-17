@@ -15,6 +15,11 @@ export interface AuthUser {
   role: UserRole
 }
 
+export interface AuthenticatedUser extends AuthUser {
+  username: string
+  permissions: AppPermission[]
+}
+
 export interface AuthSession {
   accessToken: string
   refreshToken: string
@@ -22,8 +27,16 @@ export interface AuthSession {
   user: AuthUser
 }
 
-export interface LoginPayload {
+export interface LoginRequestBody {
   username: string
   password: string
-  remember: boolean
+}
+
+export interface JwtPayload {
+  sub: number
+  username: string
+  name: string
+  role: UserRole
+  iat: number
+  exp: number
 }

@@ -35,6 +35,10 @@ const currentPageHint = computed(() => {
     return '观察 PostgreSQL 版本的请求链路和 CRUD 交互。'
   }
 
+  if (route.name === 'userManagement') {
+    return '维护 PostgreSQL 用户表，直接影响后端登录和 JWT 鉴权结果。'
+  }
+
   return '浏览当前页面内容。'
 })
 </script>

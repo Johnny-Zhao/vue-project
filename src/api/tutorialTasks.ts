@@ -14,7 +14,6 @@ export function fetchTutorialGuideApi() {
     url: '/tutorial/guide',
     method: 'GET',
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -24,7 +23,6 @@ export function fetchTutorialTasksApi(params?: TutorialTaskQuery) {
     method: 'GET',
     params,
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -33,7 +31,6 @@ export function fetchTutorialTaskDetailApi(id: number) {
     url: `/tutorial/tasks/${id}`,
     method: 'GET',
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -43,7 +40,6 @@ export function createTutorialTaskApi(payload: TutorialTaskPayload) {
     method: 'POST',
     data: payload,
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -53,7 +49,6 @@ export function updateTutorialTaskApi(id: number, payload: TutorialTaskPayload) 
     method: 'PUT',
     data: payload,
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }
 
@@ -62,6 +57,5 @@ export function deleteTutorialTaskApi(id: number) {
     url: `/tutorial/tasks/${id}`,
     method: 'DELETE',
     baseURL: API_BASE_URL,
-    auth: false,
   })
 }

@@ -74,3 +74,19 @@ export function clearStoredSession() {
 export function getAccessToken() {
   return readStoredSession()?.accessToken ?? null
 }
+
+export function getStoredSessionPersistence() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  if (window.localStorage.getItem(LOCAL_SESSION_KEY)) {
+    return 'local'
+  }
+
+  if (window.sessionStorage.getItem(SESSION_SESSION_KEY)) {
+    return 'session'
+  }
+
+  return null
+}
