@@ -1,6 +1,7 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["server/**/*.ts", "server/**/*.d.ts"],
+  "include": ["server/**/*.ts", "server/**/*.d.ts", "mcp/**/*.ts", "mcp/**/*.d.ts"],
+  "exclude": ["mcp/postgres-server.ts"],
   "compilerOptions": {
     "module": "preserve",
     "moduleResolution": "bundler",

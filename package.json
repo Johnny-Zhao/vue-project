@@ -23,9 +23,12 @@
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
+    "mcp:postgres": "node --import jiti/register mcp/local-postgres.ts",
+    "mcp:postgres:test": "node --import jiti/register mcp/local-postgres.ts --test-connection",
     "prepare": "husky"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.13.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
@@ -36,7 +39,8 @@
     "pg": "^8.21.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
-    "vue-router": "^5.0.4"
+    "vue-router": "^5.0.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

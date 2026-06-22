@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "local-postgres": {
+      "command": "node",
+      "args": ["--import", "jiti/register", "mcp/local-postgres.ts"],
+      "cwd": "E:\\Web\\Personal\\TS\\vue-project"
+    }
+  }
+}
