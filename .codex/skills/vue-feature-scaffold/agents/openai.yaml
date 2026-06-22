@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Vue Feature Scaffold'
+  short_description: 'Scaffold Vue features with repo conventions.'
+  default_prompt: "Use $vue-feature-scaffold to add a Vue feature that matches this repository's structure and shared patterns."

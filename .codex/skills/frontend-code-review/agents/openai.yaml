@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Frontend Code Review'
+  short_description: 'Review frontend regressions, UX gaps, XSS, and tests.'
+  default_prompt: 'Use $frontend-code-review to review this frontend change and list concrete findings with file references.'
