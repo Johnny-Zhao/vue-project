@@ -35,6 +35,12 @@ export const postTruckAssist: ServerRequestHandler = async (req, res) => {
     res.json(createSuccessResponse(result, 'AI 分析成功'))
   } catch (error) {
     console.error('[ai] truck assist failed:', error)
+
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json(createFailureResponse(error.message, error.statusCode))
+      return
+    }
+
     res.status(500).json(createFailureResponse('AI 服务调用失败。', 500))
   }
 }
@@ -57,6 +63,12 @@ export const postVehicleAssist: ServerRequestHandler = async (req, res) => {
     res.json(createSuccessResponse(result, '车辆 AI 分析成功'))
   } catch (error) {
     console.error('[ai] vehicle assist failed:', error)
+
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json(createFailureResponse(error.message, error.statusCode))
+      return
+    }
+
     res.status(500).json(createFailureResponse('AI 服务调用失败。', 500))
   }
 }

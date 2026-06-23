@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { pgApiRouter } from '../pg/routes/index.ts'
 import { aiRouter } from './ai.routes.ts'
+import { aiConfigRouter } from './aiConfig.routes.ts'
 import { auditLogRouter } from './auditLog.routes.ts'
 import { authRouter } from './auth.routes.ts'
 import { demoRouter } from './demo.routes.ts'
@@ -15,6 +16,7 @@ apiRouter.use('/auth', authRouter)
 apiRouter.use('/health', healthRouter)
 apiRouter.use('/users', userRouter)
 apiRouter.use('/audit-logs', auditLogRouter)
+apiRouter.use('/ai-config', aiConfigRouter)
 apiRouter.use('/vehicles', vehicleRouter)
 apiRouter.use('/demo', demoRouter)
 apiRouter.use('/tutorial', tutorialRouter)

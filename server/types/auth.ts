@@ -7,6 +7,7 @@ export type AppPermission =
   | 'task:status:update'
   | 'truck:view'
   | 'truck:batch'
+  | 'ai:config'
   | 'user:manage'
 
 export interface AuthUser {

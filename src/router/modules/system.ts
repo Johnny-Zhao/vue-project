@@ -38,12 +38,25 @@ export const systemRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/ai-config-management',
+    name: 'aiConfigManagement',
+    component: () => import('@/views/AiConfigManagement/index.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'AI 配置管理',
+      menu: true,
+      menuOrder: 6,
+      roles: ['admin'],
+      permissions: ['ai:config'],
+    },
+  },
+  {
     path: '/user-management',
     name: 'userManagement',
     component: () => import('@/views/UserManagementView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'User Management',
+      title: '用户管理',
       menu: true,
       menuOrder: 7,
       roles: ['admin'],
@@ -56,7 +69,7 @@ export const systemRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/AboutView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'TypeScript Notes',
+      title: 'TypeScript 笔记',
       menu: true,
       menuOrder: 8,
       roles: ['admin', 'viewer'],

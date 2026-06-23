@@ -1,5 +1,6 @@
 export type AiConfidence = 'low' | 'medium' | 'high'
 export type AiSource = 'api' | 'mock' | 'fallback'
+export type AiRequestMode = 'cache-hit' | 'fresh-generate' | 'force-refresh'
 
 export interface AiAssistResult {
   summary: string[]
@@ -10,6 +11,21 @@ export interface AiAssistResult {
   cached: boolean
   generatedAt: string
   notice?: string
+  runtime?: AiRuntimeMeta
+}
+
+export interface AiRuntimeMeta {
+  provider: string
+  model: string
+  endpointLabel: string
+  cacheLayer: string
+  cacheEnabled: boolean
+  manualRefreshEnabled: boolean
+  requestMode: AiRequestMode
+  timeoutMs: number
+  storeEnabled: boolean
+  apiKeyConfigured: boolean
+  refreshRecommended: boolean
 }
 
 export interface VehicleAiAssistRequestDto {

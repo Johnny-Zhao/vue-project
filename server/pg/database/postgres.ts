@@ -59,6 +59,21 @@ async function initializeDatabase(connection: Pool) {
   `)
 
   await connection.query(`
+    CREATE TABLE IF NOT EXISTS ai_runtime_config (
+      id INTEGER PRIMARY KEY,
+      model VARCHAR(60) NOT NULL,
+      request_timeout_ms INTEGER NOT NULL,
+      enable_cache BOOLEAN NOT NULL,
+      allow_manual_refresh BOOLEAN NOT NULL,
+      suggest_refresh_on_source_change BOOLEAN NOT NULL,
+      openai_store BOOLEAN NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      updated_by INTEGER NOT NULL,
+      updated_by_name VARCHAR(30) NOT NULL
+    );
+  `)
+
+  await connection.query(`
     CREATE TABLE IF NOT EXISTS audit_logs (
       id SERIAL PRIMARY KEY,
       module VARCHAR(40) NOT NULL,
@@ -255,6 +270,44 @@ async function initializeDatabase(connection: Pool) {
         'Admin User',
         1,
         'Admin User',
+      ],
+    )
+  }
+
+  const aiConfigCountResult = await connection.query<{ count: string }>(
+    'SELECT COUNT(*)::text AS count FROM ai_runtime_config',
+  )
+  const aiConfigTotal = Number(aiConfigCountResult.rows[0]?.count || 0)
+
+  if (aiConfigTotal === 0) {
+    const now = new Date().toISOString()
+    await connection.query(
+      `
+        INSERT INTO ai_runtime_config (
+          id,
+          model,
+          request_timeout_ms,
+          enable_cache,
+          allow_manual_refresh,
+          suggest_refresh_on_source_change,
+          openai_store,
+          updated_at,
+          updated_by,
+          updated_by_name
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `,
+      [
+        1,
+        env.openaiModel,
+        env.openaiTimeoutMs,
+        true,
+        true,
+        true,
+        env.openaiStore,
+        now,
+        0,
+        'System Seed',
       ],
     )
   }

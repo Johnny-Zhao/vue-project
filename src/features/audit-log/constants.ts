@@ -4,6 +4,7 @@ import type { AuditAction, AuditModule } from './types'
 export const auditModuleOptions: FormFieldOption[] = [
   { label: '车辆模块', value: 'vehicle' },
   { label: '车辆 AI 模块', value: 'vehicleAi' },
+  { label: 'AI 配置模块', value: 'aiConfig' },
 ]
 
 export const auditActionOptions: FormFieldOption[] = [
@@ -16,6 +17,7 @@ export const auditActionOptions: FormFieldOption[] = [
 const auditModuleLabelMap: Record<AuditModule, string> = {
   vehicle: '车辆模块',
   vehicleAi: '车辆 AI 模块',
+  aiConfig: 'AI 配置模块',
 }
 
 const auditActionLabelMap: Record<AuditAction, string> = {

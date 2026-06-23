@@ -161,6 +161,24 @@ function formatAiSource(value: AiAssistResult['source']) {
   return '降级结果'
 }
 
+// 格式化 AI 请求模式展示文本。
+function formatAiRequestMode(value?: NonNullable<AiAssistResult['runtime']>['requestMode']) {
+  if (value === 'cache-hit') {
+    return '命中缓存'
+  }
+
+  if (value === 'force-refresh') {
+    return '手动重算'
+  }
+
+  return '实时生成'
+}
+
+// 将布尔状态格式化为更直观的展示文案。
+function formatBooleanState(value: boolean, truthyLabel: string, falsyLabel: string) {
+  return value ? truthyLabel : falsyLabel
+}
+
 // 判断车牌号格式是否存在可疑情况。
 function isSuspiciousPlateNumber(value: string) {
   return !/^[A-Z]{2}-[A-Z0-9]{5,8}$/.test(value.trim().toUpperCase())
@@ -625,6 +643,62 @@ void loadVehicles()
 
           <p v-if="aiResult.notice" class="ai-notice">{{ aiResult.notice }}</p>
 
+          <section v-if="aiResult.runtime" class="ai-runtime-card">
+            <div class="ai-runtime-head">
+              <h4>AI 运行状态</h4>
+              <span>{{ formatAiRequestMode(aiResult.runtime.requestMode) }}</span>
+            </div>
+
+            <div class="ai-runtime-grid">
+              <article class="ai-runtime-item">
+                <span>服务提供方</span>
+                <strong>{{ aiResult.runtime.provider }}</strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>模型</span>
+                <strong>{{ aiResult.runtime.model }}</strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>缓存层</span>
+                <strong>{{ aiResult.runtime.cacheLayer }}</strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>超时设置</span>
+                <strong>{{ aiResult.runtime.timeoutMs }} ms</strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>结果持久化</span>
+                <strong>{{ formatBooleanState(true, '已开启', '未开启') }}</strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>Store 开关</span>
+                <strong>
+                  {{ formatBooleanState(aiResult.runtime.storeEnabled, '已开启', '未开启') }}
+                </strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>API Key</span>
+                <strong>
+                  {{ formatBooleanState(aiResult.runtime.apiKeyConfigured, '已配置', '未配置') }}
+                </strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>建议刷新</span>
+                <strong>
+                  {{
+                    formatBooleanState(
+                      aiResult.runtime.refreshRecommended,
+                      '建议重新分析',
+                      '当前结果可直接使用',
+                    )
+                  }}
+                </strong>
+              </article>
+            </div>
+
+            <p class="ai-runtime-tip">当前接口地址：{{ aiResult.runtime.endpointLabel }}</p>
+          </section>
+
           <section class="ai-panel">
             <h4>AI 摘要</h4>
             <ul>
@@ -712,7 +786,8 @@ void loadVehicles()
 
   .ai-head-card,
   .ai-panel,
-  .ai-detail-card {
+  .ai-detail-card,
+  .ai-runtime-card {
     border: 1px solid rgba(29, 59, 54, 0.08);
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.92);
@@ -785,6 +860,65 @@ void loadVehicles()
     gap: 1rem;
   }
 
+  .ai-runtime-card {
+    padding: 1rem 1.1rem;
+    background: linear-gradient(135deg, #f5f7f2 0%, #fffdf7 100%);
+
+    .ai-runtime-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+
+      h4 {
+        color: #173937;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+
+      span {
+        color: #7a5d2d;
+        font-size: 0.88rem;
+        font-weight: 600;
+      }
+    }
+
+    .ai-runtime-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin-top: 0.9rem;
+
+      .ai-runtime-item {
+        padding: 0.9rem 1rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.92);
+
+        span {
+          color: #66706d;
+          font-size: 0.82rem;
+        }
+
+        strong {
+          display: block;
+          margin-top: 0.32rem;
+          color: #173937;
+          font-size: 0.95rem;
+          line-height: 1.4;
+          word-break: break-word;
+        }
+      }
+    }
+
+    .ai-runtime-tip {
+      margin-top: 0.9rem;
+      color: #556260;
+      font-size: 0.86rem;
+      line-height: 1.6;
+      word-break: break-all;
+    }
+  }
+
   .ai-meta {
     display: flex;
     flex-wrap: wrap;
@@ -828,7 +962,8 @@ void loadVehicles()
 
   .ai-shell {
     .ai-head-card,
-    .ai-detail-grid {
+    .ai-detail-grid,
+    .ai-runtime-card .ai-runtime-grid {
       flex-direction: column;
       grid-template-columns: 1fr;
     }

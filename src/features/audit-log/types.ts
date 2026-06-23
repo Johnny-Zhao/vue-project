@@ -1,4 +1,4 @@
-export type AuditModule = 'vehicle' | 'vehicleAi'
+export type AuditModule = 'vehicle' | 'vehicleAi' | 'aiConfig'
 export type AuditAction = 'create' | 'update' | 'delete' | 'analyze'
 
 export interface AuditLogItem {

@@ -8,18 +8,20 @@ import {
 import type {
   AiAssistResult,
   AiConfidence,
+  AiRequestMode,
+  AiRuntimeMeta,
   VehicleAiAnalysisEntity,
   VehicleAiAssistDto,
   VehicleAiAssistRequestDto,
 } from '../../types/ai.ts'
+import type { AiRuntimeConfigView } from '../../types/aiConfig.ts'
 import { AppError } from '../../utils/appError.ts'
+import { getAiRuntimeConfigSnapshot } from '../aiConfig.service.ts'
 
 type OpenAiNormalizedResult = Pick<
   AiAssistResult,
   'summary' | 'risks' | 'nextActions' | 'confidence'
 >
-
-let openaiClient: OpenAI | null = null
 
 interface VehicleAiOperationContext {
   operatorId: number
@@ -27,19 +29,13 @@ interface VehicleAiOperationContext {
   requestId: string
 }
 
-// 获取可复用的 OpenAI 客户端实例。
-function getOpenAiClient() {
-  if (openaiClient) {
-    return openaiClient
-  }
-
-  openaiClient = new OpenAI({
+// 为当前请求创建 OpenAI 客户端，确保运行时配置修改后立即生效。
+function createOpenAiClient(runtimeConfig: AiRuntimeConfigView) {
+  return new OpenAI({
     apiKey: env.openaiApiKey,
-    timeout: env.openaiTimeoutMs,
-    baseURL: env.openaiBaseUrl,
+    timeout: runtimeConfig.requestTimeoutMs,
+    baseURL: env.openaiBaseUrl || undefined,
   })
-
-  return openaiClient
 }
 
 // 读取或生成车辆档案 AI 分析结果，并在需要时保存到数据库。
@@ -48,13 +44,18 @@ export async function getVehicleAssistResult(
   context: VehicleAiOperationContext,
 ): Promise<AiAssistResult> {
   const { vehicle, forceRefresh = false } = payload
+  const runtimeConfig = await getAiRuntimeConfigSnapshot()
   const savedAnalysis = await findVehicleAiAnalysisByVehicleId(vehicle.id)
 
-  if (savedAnalysis && !forceRefresh) {
-    return buildCachedVehicleAssistResult(savedAnalysis, vehicle)
+  if (forceRefresh && !runtimeConfig.allowManualRefresh) {
+    throw new AppError('当前 AI 配置已关闭手动重新分析，请前往 AI 配置管理页面开启后再试。', 400)
   }
 
-  const generatedResult = await generateVehicleAssistResult(vehicle)
+  if (runtimeConfig.enableCache && savedAnalysis && !forceRefresh) {
+    return buildCachedVehicleAssistResult(savedAnalysis, vehicle, runtimeConfig)
+  }
+
+  const generatedResult = await generateVehicleAssistResult(vehicle, runtimeConfig)
   const persistedAnalysis = await upsertVehicleAiAnalysis(
     vehicle.id,
     generatedResult,
@@ -77,34 +78,47 @@ export async function getVehicleAssistResult(
     requestId: context.requestId,
   })
 
-  return buildPersistedVehicleAssistResult(persistedAnalysis)
+  return buildPersistedVehicleAssistResult(
+    persistedAnalysis,
+    forceRefresh ? 'force-refresh' : 'fresh-generate',
+    runtimeConfig,
+  )
 }
 
 // 生成车辆档案的 AI 摘要与异常识别结果。
 export async function generateVehicleAssistResult(
   dto: VehicleAiAssistDto,
+  runtimeConfig: AiRuntimeConfigView,
 ): Promise<AiAssistResult> {
-  if (!env.openaiApiKey) {
-    return buildMockVehicleAssist(dto)
+  if (!runtimeConfig.apiKeyConfigured) {
+    return buildMockVehicleAssist(dto, runtimeConfig)
   }
 
   try {
-    const result = await requestOpenAiVehicleAssist(dto)
-    return sanitizeAiAssistResult(result, 'api')
+    const result = await requestOpenAiVehicleAssist(dto, runtimeConfig)
+    return sanitizeAiAssistResult(result, 'api', runtimeConfig)
   } catch (error) {
     console.warn('[ai] official vehicle assist request failed, fallback to mock result:', error)
 
     return {
-      ...buildMockVehicleAssist(dto),
+      ...buildMockVehicleAssist(dto, runtimeConfig),
       notice: '当前 AI 服务暂时不可用，系统已自动切换到规则兜底结果。',
       source: 'fallback',
       cached: false,
+      runtime: createVehicleAiRuntimeMeta(runtimeConfig, {
+        requestMode: 'fresh-generate',
+        refreshRecommended: false,
+      }),
     }
   }
 }
 
 // 将数据库中的分析记录转换为接口返回结构。
-function buildPersistedVehicleAssistResult(entity: VehicleAiAnalysisEntity): AiAssistResult {
+function buildPersistedVehicleAssistResult(
+  entity: VehicleAiAnalysisEntity,
+  requestMode: AiRequestMode,
+  runtimeConfig: AiRuntimeConfigView,
+): AiAssistResult {
   return {
     summary: entity.summary,
     risks: entity.risks,
@@ -114,6 +128,10 @@ function buildPersistedVehicleAssistResult(entity: VehicleAiAnalysisEntity): AiA
     cached: false,
     generatedAt: entity.generatedAt,
     notice: entity.notice,
+    runtime: createVehicleAiRuntimeMeta(runtimeConfig, {
+      requestMode,
+      refreshRecommended: false,
+    }),
   }
 }
 
@@ -121,16 +139,45 @@ function buildPersistedVehicleAssistResult(entity: VehicleAiAnalysisEntity): AiA
 function buildCachedVehicleAssistResult(
   entity: VehicleAiAnalysisEntity,
   dto: VehicleAiAssistDto,
+  runtimeConfig: AiRuntimeConfigView,
 ): AiAssistResult {
   const isOutdated = hasSourceChanged(entity.sourceUpdatedAt, dto.updatedAt)
+  const refreshRecommended = runtimeConfig.suggestRefreshOnSourceChange && isOutdated
   const cacheNotice = isOutdated
-    ? '当前展示的是已保存的历史分析结果，车辆档案已更新，建议点击“重新分析”刷新结果。'
+    ? '当前展示的是已保存的历史分析结果，车辆档案已更新，建议重新分析以刷新结果。'
     : '当前展示的是数据库中最近一次已保存的 AI 分析结果。'
 
   return {
-    ...buildPersistedVehicleAssistResult(entity),
+    ...buildPersistedVehicleAssistResult(entity, 'cache-hit', runtimeConfig),
     cached: true,
     notice: mergeNotice(cacheNotice, entity.notice),
+    runtime: createVehicleAiRuntimeMeta(runtimeConfig, {
+      requestMode: 'cache-hit',
+      refreshRecommended,
+    }),
+  }
+}
+
+// 统一构建车辆 AI 的运行元信息，方便前端做状态展示与面试讲解。
+function createVehicleAiRuntimeMeta(
+  runtimeConfig: AiRuntimeConfigView,
+  options: {
+    requestMode: AiRequestMode
+    refreshRecommended: boolean
+  },
+): AiRuntimeMeta {
+  return {
+    provider: 'OpenAI Compatible',
+    model: runtimeConfig.model,
+    endpointLabel: runtimeConfig.endpointLabel,
+    cacheLayer: 'PostgreSQL',
+    cacheEnabled: runtimeConfig.enableCache,
+    manualRefreshEnabled: runtimeConfig.allowManualRefresh,
+    requestMode: options.requestMode,
+    timeoutMs: runtimeConfig.requestTimeoutMs,
+    storeEnabled: runtimeConfig.openaiStore,
+    apiKeyConfigured: runtimeConfig.apiKeyConfigured,
+    refreshRecommended: options.refreshRecommended,
   }
 }
 
@@ -155,15 +202,16 @@ function hasSourceChanged(savedUpdatedAt: string, currentUpdatedAt: string) {
   return savedTimestamp !== currentTimestamp
 }
 
-// 调用官方 OpenAI 接口分析车辆档案。
+// 调用 OpenAI 接口分析车辆档案。
 async function requestOpenAiVehicleAssist(
   dto: VehicleAiAssistDto,
+  runtimeConfig: AiRuntimeConfigView,
 ): Promise<OpenAiNormalizedResult> {
-  const client = getOpenAiClient()
+  const client = createOpenAiClient(runtimeConfig)
 
   const response = (await client.responses.create({
-    model: env.openaiModel,
-    store: env.openaiStore,
+    model: runtimeConfig.model,
+    store: runtimeConfig.openaiStore,
     instructions: [
       '你是一个后台管理系统中的车辆档案分析助手。',
       '请根据车辆基础档案生成中文结果。',
@@ -241,7 +289,7 @@ function tryParseJson(outputText: string): OpenAiNormalizedResult | null {
         }
       }
     } catch {
-      // 继续尝试其他变体。
+      // 继续尝试其他输出变体。
     }
   }
 
@@ -252,6 +300,7 @@ function tryParseJson(outputText: string): OpenAiNormalizedResult | null {
 function sanitizeAiAssistResult(
   result: OpenAiNormalizedResult,
   source: 'api' | 'mock' | 'fallback',
+  runtimeConfig: AiRuntimeConfigView,
 ): AiAssistResult {
   const summary = result.summary.filter(isNonEmptyString).slice(0, 6)
   const risks = result.risks.filter(isNonEmptyString).slice(0, 6)
@@ -268,12 +317,19 @@ function sanitizeAiAssistResult(
     source,
     cached: false,
     generatedAt: new Date().toISOString(),
-    notice: source === 'api' ? '当前结果由官方 OpenAI 接口生成。' : undefined,
+    notice: source === 'api' ? '当前结果由 OpenAI 接口生成。' : undefined,
+    runtime: createVehicleAiRuntimeMeta(runtimeConfig, {
+      requestMode: 'fresh-generate',
+      refreshRecommended: false,
+    }),
   }
 }
 
 // 构建规则兜底结果，保证无 Key 时也能演示。
-function buildMockVehicleAssist(dto: VehicleAiAssistDto): AiAssistResult {
+function buildMockVehicleAssist(
+  dto: VehicleAiAssistDto,
+  runtimeConfig: AiRuntimeConfigView,
+): AiAssistResult {
   const summary = [
     `车辆 ${dto.plateNumber} 为${dto.vehicleType}，当前状态为${dto.status}。`,
     `该车辆采用${dto.driveType}驱动，能源类型为${dto.energyType}。`,
@@ -294,9 +350,13 @@ function buildMockVehicleAssist(dto: VehicleAiAssistDto): AiAssistResult {
     source: 'mock',
     cached: false,
     generatedAt: new Date().toISOString(),
-    notice: env.openaiApiKey
+    notice: runtimeConfig.apiKeyConfigured
       ? '当前结果来自服务端规则逻辑。'
       : 'OPENAI_API_KEY 未配置，系统返回了规则兜底结果。',
+    runtime: createVehicleAiRuntimeMeta(runtimeConfig, {
+      requestMode: 'fresh-generate',
+      refreshRecommended: false,
+    }),
   }
 }
 
@@ -309,7 +369,7 @@ function buildVehicleRisks(dto: VehicleAiAssistDto) {
   }
 
   if (dto.flags.missingVin) {
-    risks.push('车架号缺失，会影响资产识别、追溯和后续核验。')
+    risks.push('车架号缺失，会影响资产识别、追溯和后续校验。')
   }
 
   if (dto.flags.missingBrandModel) {
