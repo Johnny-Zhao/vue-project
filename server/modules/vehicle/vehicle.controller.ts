@@ -1,14 +1,14 @@
-import type { CreateVehiclePayload, UpdateVehiclePayload } from '../types/vehicle.ts'
-import type { ServerRequestHandler } from '../types/http.ts'
+import type { CreateVehiclePayload, UpdateVehiclePayload } from '../../types/vehicle.ts'
+import type { ServerRequestHandler } from '../../types/http.ts'
 import {
   createVehicle,
   getVehicleDetail,
   listVehicles,
   removeVehicle,
   updateVehicle,
-} from '../services/vehicle.service.ts'
-import { createSuccessResponse } from '../utils/apiResponse.ts'
-import { AppError } from '../utils/appError.ts'
+} from './vehicle.service.ts'
+import { createSuccessResponse } from '../../utils/apiResponse.ts'
+import { AppError } from '../../utils/appError.ts'
 
 // Read operator data from request context for service and audit logging.
 function getOperatorContext(req: Parameters<ServerRequestHandler>[0]) {

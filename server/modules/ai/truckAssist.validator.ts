@@ -1,5 +1,5 @@
-import type { MessageValidationResult } from '../types/http.ts'
-import type { TruckAiAssistDto } from '../types/ai.ts'
+import type { MessageValidationResult } from '../../types/http.ts'
+import type { TruckAiAssistDto } from '../../types/ai.ts'
 
 export function validateTruckAssistDto(dto: unknown): MessageValidationResult<TruckAiAssistDto> {
   if (!dto || typeof dto !== 'object') {

@@ -1,4 +1,4 @@
-import { getPostgresPool } from '../database/postgres.ts'
+import { getPostgresPool } from '../../pg/database/postgres.ts'
 import type {
   AuditLogEntity,
   AuditLogFilters,

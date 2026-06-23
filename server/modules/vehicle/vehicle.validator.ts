@@ -1,4 +1,4 @@
-import type { BodyValidationResult } from '../types/http.ts'
+import type { BodyValidationResult } from '../../types/http.ts'
 import type {
   CreateVehiclePayload,
   UpdateVehiclePayload,
@@ -6,8 +6,8 @@ import type {
   VehicleEnergyType,
   VehicleStatus,
   VehicleType,
-} from '../types/vehicle.ts'
-import { AppError } from '../utils/appError.ts'
+} from '../../types/vehicle.ts'
+import { AppError } from '../../utils/appError.ts'
 
 const allowedVehicleTypes: VehicleType[] = ['tractor', 'truck', 'trailer', 'van']
 const allowedDriveTypes: VehicleDriveType[] = ['4x2', '6x4', '8x4']

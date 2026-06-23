@@ -1,4 +1,4 @@
-import { getPostgresPool } from '../database/postgres.ts'
+import { getPostgresPool } from '../../pg/database/postgres.ts'
 import type { AiRuntimeConfigEntity, AiRuntimeConfigRow } from '../../types/aiConfig.ts'
 
 // 将数据库中的 AI 运行配置记录映射为服务层结构。

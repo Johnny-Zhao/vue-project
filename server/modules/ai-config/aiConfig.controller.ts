@@ -1,8 +1,8 @@
-import type { UpdateAiRuntimeConfigPayload } from '../types/aiConfig.ts'
-import type { ServerRequestHandler } from '../types/http.ts'
-import { getAiRuntimeConfigDetail, updateAiRuntimeConfig } from '../services/aiConfig.service.ts'
-import { createSuccessResponse } from '../utils/apiResponse.ts'
-import { AppError } from '../utils/appError.ts'
+import type { UpdateAiRuntimeConfigPayload } from '../../types/aiConfig.ts'
+import type { ServerRequestHandler } from '../../types/http.ts'
+import { getAiRuntimeConfigDetail, updateAiRuntimeConfig } from './aiConfig.service.ts'
+import { createSuccessResponse } from '../../utils/apiResponse.ts'
+import { AppError } from '../../utils/appError.ts'
 
 // 从请求上下文中提取操作人信息，供审计日志复用。
 function getOperatorContext(req: Parameters<ServerRequestHandler>[0]) {

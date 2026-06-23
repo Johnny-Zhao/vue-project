@@ -1,6 +1,6 @@
-import type { AuditAction, AuditModule } from '../types/audit.ts'
-import type { AuditLogPageResult, AuditLogQuery } from '../types/auditLog.ts'
-import { listAuditLogs as listAuditLogRecords } from '../pg/repositories/auditLogQuery.repository.ts'
+import type { AuditAction, AuditModule } from '../../types/audit.ts'
+import type { AuditLogPageResult, AuditLogQuery } from '../../types/auditLog.ts'
+import { listAuditLogs as listAuditLogRecords } from './auditLogQuery.repository.ts'
 
 const allowedModules: AuditModule[] = ['vehicle', 'vehicleAi', 'aiConfig']
 const allowedActions: AuditAction[] = ['create', 'update', 'delete', 'analyze']

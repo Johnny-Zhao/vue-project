@@ -1,4 +1,4 @@
-import { env } from '../config/env.ts'
+import { env } from '../../config/env.ts'
 import type {
   AppPermission,
   AuthSession,
@@ -6,15 +6,15 @@ import type {
   JwtPayload,
   LoginRequestBody,
   UserRole,
-} from '../types/auth.ts'
+} from '../../types/auth.ts'
 import {
   findUserById,
   findUserByUsername,
   updateUserPassword,
-} from '../pg/repositories/user.repository.ts'
-import { AppError } from '../utils/appError.ts'
-import { signJwt, verifyJwt } from '../utils/jwt.ts'
-import { hashPassword, isHashedPassword, verifyPassword } from '../utils/password.ts'
+} from '../../pg/repositories/user.repository.ts'
+import { AppError } from '../../utils/appError.ts'
+import { signJwt, verifyJwt } from '../../utils/jwt.ts'
+import { hashPassword, isHashedPassword, verifyPassword } from '../../utils/password.ts'
 
 const rolePermissionMap: Record<UserRole, AppPermission[]> = {
   admin: [

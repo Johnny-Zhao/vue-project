@@ -1,5 +1,5 @@
-import type { VehicleAiAssistRequestDto } from '../types/ai.ts'
-import type { MessageValidationResult } from '../types/http.ts'
+import type { VehicleAiAssistRequestDto } from '../../types/ai.ts'
+import type { MessageValidationResult } from '../../types/http.ts'
 
 // 校验车辆 AI 分析请求体是否完整。
 export function validateVehicleAssistDto(

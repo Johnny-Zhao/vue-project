@@ -1,14 +1,14 @@
 import { Router } from 'express'
 import { pgApiRouter } from '../pg/routes/index.ts'
-import { aiRouter } from './ai.routes.ts'
-import { aiConfigRouter } from './aiConfig.routes.ts'
-import { auditLogRouter } from './auditLog.routes.ts'
-import { authRouter } from './auth.routes.ts'
+import { aiRouter } from '../modules/ai/ai.routes.ts'
+import { aiConfigRouter } from '../modules/ai-config/aiConfig.routes.ts'
+import { auditLogRouter } from '../modules/auditLog/auditLog.routes.ts'
+import { authRouter } from '../modules/auth/auth.routes.ts'
 import { demoRouter } from './demo.routes.ts'
 import { healthRouter } from './health.routes.ts'
 import { tutorialRouter } from './tutorial.routes.ts'
 import { userRouter } from './user.routes.ts'
-import { vehicleRouter } from './vehicle.routes.ts'
+import { vehicleRouter } from '../modules/vehicle/vehicle.routes.ts'
 
 export const apiRouter = Router()
 

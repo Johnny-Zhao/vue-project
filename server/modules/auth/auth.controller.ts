@@ -1,7 +1,7 @@
-import type { LoginRequestBody } from '../types/auth.ts'
-import type { ServerRequestHandler } from '../types/http.ts'
-import { authenticateUser, getCurrentAuthSession } from '../services/auth.service.ts'
-import { createSuccessResponse } from '../utils/apiResponse.ts'
+import type { LoginRequestBody } from '../../types/auth.ts'
+import type { ServerRequestHandler } from '../../types/http.ts'
+import { authenticateUser, getCurrentAuthSession } from './auth.service.ts'
+import { createSuccessResponse } from '../../utils/apiResponse.ts'
 
 function getBearerToken(authorizationHeader?: string | string[]) {
   const value = Array.isArray(authorizationHeader) ? authorizationHeader[0] : authorizationHeader

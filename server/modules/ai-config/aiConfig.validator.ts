@@ -1,6 +1,6 @@
-import type { BodyValidationResult } from '../types/http.ts'
-import type { UpdateAiRuntimeConfigPayload } from '../types/aiConfig.ts'
-import { AppError } from '../utils/appError.ts'
+import type { BodyValidationResult } from '../../types/http.ts'
+import type { UpdateAiRuntimeConfigPayload } from '../../types/aiConfig.ts'
+import { AppError } from '../../utils/appError.ts'
 
 // 规范化字符串输入，避免写入过长或空白值。
 function normalizeText(value: unknown, maxLength: number) {

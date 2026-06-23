@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import { getAuditLogs } from '../controllers/auditLog.controller.ts'
-import { authorize, requireAuth } from '../middleware/auth.ts'
-import { asyncHandler } from '../utils/asyncHandler.ts'
+import { getAuditLogs } from './auditLog.controller.ts'
+import { authorize, requireAuth } from '../../middleware/auth.ts'
+import { asyncHandler } from '../../utils/asyncHandler.ts'
 
 export const auditLogRouter = Router()
 

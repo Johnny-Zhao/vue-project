@@ -9,7 +9,7 @@ import type {
   VehicleSortOrder,
   VehicleStatus,
   VehicleType,
-} from '../types/vehicle.ts'
+} from '../../types/vehicle.ts'
 import {
   createVehicle as createVehicleRecord,
   deleteVehicle as deleteVehicleRecord,
@@ -17,9 +17,9 @@ import {
   findVehicleByPlateNumber,
   listVehicles as listVehicleRecords,
   updateVehicle as updateVehicleRecord,
-} from '../pg/repositories/vehicle.repository.ts'
-import { createAuditLog } from '../pg/repositories/auditLog.repository.ts'
-import { AppError } from '../utils/appError.ts'
+} from './vehicle.repository.ts'
+import { createAuditLog } from '../auditLog/auditLog.repository.ts'
+import { AppError } from '../../utils/appError.ts'
 
 interface OperationContext {
   operatorId: number

@@ -1,11 +1,11 @@
-import type { TruckAiAssistDto, VehicleAiAssistRequestDto } from '../types/ai.ts'
-import type { ServerRequestHandler } from '../types/http.ts'
-import { generateTruckAssistResult } from '../services/ai/truckAssist.service.ts'
-import { getVehicleAssistResult } from '../services/ai/vehicleAssist.service.ts'
-import { createFailureResponse, createSuccessResponse } from '../utils/apiResponse.ts'
-import { AppError } from '../utils/appError.ts'
-import { validateTruckAssistDto } from '../validators/truckAssist.validator.ts'
-import { validateVehicleAssistDto } from '../validators/vehicleAssist.validator.ts'
+import type { TruckAiAssistDto, VehicleAiAssistRequestDto } from '../../types/ai.ts'
+import type { ServerRequestHandler } from '../../types/http.ts'
+import { generateTruckAssistResult } from './truckAssist.service.ts'
+import { getVehicleAssistResult } from './vehicleAssist.service.ts'
+import { createFailureResponse, createSuccessResponse } from '../../utils/apiResponse.ts'
+import { AppError } from '../../utils/appError.ts'
+import { validateTruckAssistDto } from './truckAssist.validator.ts'
+import { validateVehicleAssistDto } from './vehicleAssist.validator.ts'
 
 // 读取请求上下文中的操作人信息，供审计日志与 AI 分析落库复用。
 function getOperatorContext(req: Parameters<ServerRequestHandler>[0]) {

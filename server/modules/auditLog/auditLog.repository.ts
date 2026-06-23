@@ -1,4 +1,4 @@
-import { getPostgresPool } from '../database/postgres.ts'
+import { getPostgresPool } from '../../pg/database/postgres.ts'
 import type { AuditLogPayload } from '../../types/audit.ts'
 
 // 写入业务审计日志，记录关键数据变更的前后状态。

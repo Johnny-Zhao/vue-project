@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { postTruckAssist, postVehicleAssist } from '../controllers/ai.controller.ts'
-import { authorize, requireAuth } from '../middleware/auth.ts'
+import { postTruckAssist, postVehicleAssist } from './ai.controller.ts'
+import { authorize, requireAuth } from '../../middleware/auth.ts'
 
 export const aiRouter = Router()
 

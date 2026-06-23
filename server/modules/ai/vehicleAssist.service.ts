@@ -1,10 +1,10 @@
 import OpenAI from 'openai'
 import { env } from '../../config/env.ts'
-import { createAuditLog } from '../../pg/repositories/auditLog.repository.ts'
+import { createAuditLog } from '../auditLog/auditLog.repository.ts'
 import {
   findVehicleAiAnalysisByVehicleId,
   upsertVehicleAiAnalysis,
-} from '../../pg/repositories/vehicleAiAnalysis.repository.ts'
+} from './vehicleAiAnalysis.repository.ts'
 import type {
   AiAssistResult,
   AiConfidence,
@@ -16,7 +16,7 @@ import type {
 } from '../../types/ai.ts'
 import type { AiRuntimeConfigView } from '../../types/aiConfig.ts'
 import { AppError } from '../../utils/appError.ts'
-import { getAiRuntimeConfigSnapshot } from '../aiConfig.service.ts'
+import { getAiRuntimeConfigSnapshot } from '../ai-config/aiConfig.service.ts'
 
 type OpenAiNormalizedResult = Pick<
   AiAssistResult,

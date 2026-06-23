@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express'
 import type { AppPermission, UserRole } from '../types/auth.ts'
-import { getRolePermissions, verifyAccessToken } from '../services/auth.service.ts'
+import { getRolePermissions, verifyAccessToken } from '../modules/auth/auth.service.ts'
 import { AppError } from '../utils/appError.ts'
 
 function getAuthorizationHeader(headers: Record<string, string | string[] | undefined>) {

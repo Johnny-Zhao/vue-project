@@ -1,15 +1,15 @@
-import { env } from '../config/env.ts'
-import { createAuditLog } from '../pg/repositories/auditLog.repository.ts'
+import { env } from '../../config/env.ts'
+import { createAuditLog } from '../auditLog/auditLog.repository.ts'
 import {
   findAiRuntimeConfig,
   updateAiRuntimeConfig as updateAiRuntimeConfigRecord,
-} from '../pg/repositories/aiRuntimeConfig.repository.ts'
+} from './aiConfig.repository.ts'
 import type {
   AiRuntimeConfigEntity,
   AiRuntimeConfigView,
   UpdateAiRuntimeConfigPayload,
-} from '../types/aiConfig.ts'
-import { AppError } from '../utils/appError.ts'
+} from '../../types/aiConfig.ts'
+import { AppError } from '../../utils/appError.ts'
 
 interface OperationContext {
   operatorId: number
