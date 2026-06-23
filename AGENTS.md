@@ -41,9 +41,11 @@
 - 页面局部状态优先使用组件本地状态或 feature composable。
 - 只有跨路由、长生命周期、会话级状态才优先使用 Pinia。
 - 派生数据优先使用 `computed`，不要把可推导的数据再复制成一份可写状态。
-- 当 Vue、Element Plus、Axios、Pinia、Vitest、Playwright 已经能满足需求时，不要引入不必要的新依 赖。
-- 每个方法之前需要加一段注释。
+- 当 Vue、Element Plus、Axios、Pinia、Vitest、Playwright 已经能满足需求时，不要引入不必要的新依赖。
+- 每个方法之前需要加一段注释，注释结尾不需要标点符号。
 - Less实现需要有级联，而不是一味的平铺样式，模块归模块。
+- 注释用中文，文案也用中文。
+- 样式使用Less。
 
 ## 路由与权限规则
 

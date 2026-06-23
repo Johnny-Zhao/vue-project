@@ -20,6 +20,7 @@ export interface AuthSession {
   refreshToken: string
   expiresAt: number
   user: AuthUser
+  menus: string[]
 }
 
 export interface LoginPayload {

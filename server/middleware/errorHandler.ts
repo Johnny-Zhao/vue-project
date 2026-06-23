@@ -1,7 +1,7 @@
 import type { ServerErrorHandler } from '../types/http.ts'
 import { createFailureResponse } from '../utils/apiResponse.ts'
 
-export const errorHandler: ServerErrorHandler = (error, _req, res, _next) => {
+export const errorHandler: ServerErrorHandler = (error, req, res, _next) => {
   const invalidJson =
     error instanceof SyntaxError &&
     typeof error.message === 'string' &&
@@ -19,6 +19,14 @@ export const errorHandler: ServerErrorHandler = (error, _req, res, _next) => {
       ? error.message
       : 'Server request handling failed.'
 
-  console.error('[server] unexpected error:', error)
+  console.error('[server] unexpected error:', {
+    requestId: req.requestId,
+    method: req.method,
+    url: req.originalUrl,
+    userId: req.authUser?.id ?? null,
+    username: req.authUser?.username ?? null,
+    statusCode,
+    error,
+  })
   res.status(statusCode).json(createFailureResponse(message, statusCode))
 }

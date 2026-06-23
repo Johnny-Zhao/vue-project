@@ -7,7 +7,7 @@ export const systemRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/ExpressPlaygroundView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Express 接口实验',
+      title: 'Express Playground',
       menu: true,
       menuOrder: 2,
       roles: ['admin', 'viewer'],
@@ -43,9 +43,9 @@ export const systemRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/UserManagementView.vue'),
     meta: {
       requiresAuth: true,
-      title: '用户管理',
+      title: 'User Management',
       menu: true,
-      menuOrder: 5,
+      menuOrder: 7,
       roles: ['admin'],
       permissions: ['user:manage'],
     },
@@ -56,9 +56,9 @@ export const systemRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/AboutView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'TypeScript 笔记',
+      title: 'TypeScript Notes',
       menu: true,
-      menuOrder: 6,
+      menuOrder: 8,
       roles: ['admin', 'viewer'],
     },
   },

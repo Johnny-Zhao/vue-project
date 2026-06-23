@@ -18,10 +18,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = computed(() => session.value?.user ?? null)
   const token = computed(() => session.value?.accessToken ?? '')
+  const menus = computed(() => session.value?.menus ?? [])
   const role = computed<UserRole | null>(() => session.value?.user.role ?? null)
   const permissions = computed<AppPermission[]>(() => getRolePermissions(role.value))
   const isAuthenticated = computed(() => Boolean(session.value))
 
+  // Update the in-memory and persisted session state.
   function updateSession(nextSession: AuthSession | null, remember = sessionRemember.value) {
     session.value = nextSession
 
@@ -35,6 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearStoredSession()
   }
 
+  // Restore the local session and verify it with the backend.
   async function hydrateSession() {
     const nextSession = readStoredSession()
 
@@ -57,12 +60,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Perform login and persist the returned session.
   async function login(payload: LoginPayload) {
     const nextSession = await loginApi(payload)
     updateSession(nextSession, payload.remember)
     return nextSession
   }
 
+  // Clear the current authenticated session.
   function logout() {
     updateSession(null, false)
   }
@@ -84,6 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
     session,
     user,
     token,
+    menus,
     role,
     permissions,
     isAuthenticated,

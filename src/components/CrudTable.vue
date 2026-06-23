@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useSlots } from 'vue'
 import type { TableBatchAction, TableColumnSchema, TablePagination } from './formSchemas'
 
 type TableRow = Record<string, unknown>
 
-withDefaults(
+const slots = useSlots()
+
+const props = withDefaults(
   defineProps<{
     rows: TableRow[]
     columns: TableColumnSchema<any>[]
@@ -14,6 +16,8 @@ withDefaults(
     selectionEnabled?: boolean
     batchActions?: TableBatchAction<any>[]
     emptyText?: string
+    operationLabel?: string
+    operationWidth?: number | string
   }>(),
   {
     loading: false,
@@ -21,6 +25,8 @@ withDefaults(
     selectionEnabled: true,
     batchActions: () => [],
     emptyText: '暂无数据',
+    operationLabel: '操作',
+    operationWidth: 160,
   },
 )
 
@@ -36,12 +42,15 @@ const emit = defineEmits<{
 const selectedRows = ref<TableRow[]>([])
 
 const hasSelection = computed(() => selectedRows.value.length > 0)
+const hasOperationSlot = computed(() => Boolean(slots.operation))
 
+// 同步表格勾选项并向外抛出事件。
 function handleSelectionChange(rows: TableRow[]) {
   selectedRows.value = rows
   emit('selectionChange', rows)
 }
 
+// 规范化排序参数，方便页面层统一处理。
 function handleSortChange(payload: {
   column: unknown
   prop: string | null
@@ -53,6 +62,7 @@ function handleSortChange(payload: {
   })
 }
 
+// 使用当前勾选结果触发批量操作。
 function handleBatchAction(actionKey: string) {
   emit('batchAction', {
     actionKey,
@@ -60,6 +70,7 @@ function handleBatchAction(actionKey: string) {
   })
 }
 
+// 在无选中项或业务声明禁用时禁用批量按钮。
 function isBatchActionDisabled(action: TableBatchAction<any>) {
   if (!hasSelection.value) {
     return true
@@ -68,6 +79,7 @@ function isBatchActionDisabled(action: TableBatchAction<any>) {
   return action.disabled?.(selectedRows.value) ?? false
 }
 
+// 解析单元格展示值。
 function formatCell(column: TableColumnSchema<any>, row: TableRow, index: number) {
   if (column.formatter) {
     return column.formatter(row, index)
@@ -80,8 +92,12 @@ function formatCell(column: TableColumnSchema<any>, row: TableRow, index: number
   return row[column.prop as string] ?? '-'
 }
 
+// 避免向表格列传入空 prop。
 function resolveColumnProp(prop: string | number | symbol | undefined): string | undefined {
-  if (prop == null || prop === '') return undefined
+  if (prop == null || prop === '') {
+    return undefined
+  }
+
   return String(prop)
 }
 </script>
@@ -134,6 +150,18 @@ function resolveColumnProp(prop: string | number | symbol | undefined): string |
       >
         <template #default="{ row, $index }">
           {{ formatCell(column, row, $index) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column
+        v-if="hasOperationSlot"
+        :label="props.operationLabel"
+        :width="props.operationWidth"
+        fixed="right"
+        align="center"
+      >
+        <template #default="{ row, $index }">
+          <slot name="operation" :row="row" :index="$index" />
         </template>
       </el-table-column>
     </el-table>

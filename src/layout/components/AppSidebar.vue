@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { matchesPermissions, matchesRole } from '@/features/auth/permissions'
 import { useAuthStore } from '@/features/auth/store'
 import { useTaskStore } from '@/features/task/store'
 
@@ -11,17 +10,16 @@ const router = useRouter()
 const authStore = useAuthStore()
 const taskStore = useTaskStore()
 
-const { user } = storeToRefs(authStore)
+const { user, menus } = storeToRefs(authStore)
 const { pendingCount, completionRate } = storeToRefs(taskStore)
 
+// 根据后端返回的菜单权限构建侧边栏导航。
 const navigationItems = computed(() =>
   router
     .getRoutes()
     .filter((item) => item.meta.menu)
-    .filter(
-      (item) =>
-        matchesRole(authStore.role, item.meta.roles) &&
-        matchesPermissions(authStore.permissions, item.meta.permissions),
+    .filter((item) =>
+      menus.value.length === 0 ? true : menus.value.includes(String(item.name ?? '')),
     )
     .sort((left, right) => (Number(left.meta.menuOrder) || 0) - (Number(right.meta.menuOrder) || 0))
     .map((item) => ({
@@ -31,6 +29,7 @@ const navigationItems = computed(() =>
     })),
 )
 
+// 退出登录并返回登录页。
 async function handleLogout() {
   authStore.logout()
   await router.replace({ name: 'login' })
@@ -40,9 +39,9 @@ async function handleLogout() {
 <template>
   <aside class="shell-sidebar">
     <div class="sidebar-brand">
-      <p class="brand-tag">Workspace</p>
-      <h1>后台练习台</h1>
-      <p class="brand-copy">把路由、权限、接口请求和数据库练习放进一个更清晰的后台壳子里。</p>
+      <p class="brand-tag">工作台</p>
+      <h1>管理端练习项目</h1>
+      <p class="brand-copy">统一串联路由、鉴权、后端接口与数据库 CRUD，便于展示完整业务闭环。</p>
     </div>
 
     <section class="sidebar-card account-card">
@@ -55,7 +54,7 @@ async function handleLogout() {
     </section>
 
     <nav class="side-nav">
-      <p class="nav-title">功能菜单</p>
+      <p class="nav-title">导航菜单</p>
 
       <el-menu
         :default-active="route.path"
@@ -82,7 +81,7 @@ async function handleLogout() {
 
       <div class="stat-grid">
         <div>
-          <span>待办任务</span>
+          <span>待处理</span>
           <strong>{{ pendingCount }}</strong>
         </div>
         <div>

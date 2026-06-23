@@ -29,14 +29,35 @@ const rolePermissionMap: Record<UserRole, AppPermission[]> = {
   viewer: [],
 }
 
+const defaultMenuKeys = [
+  'home',
+  'taskCreate',
+  'expressPlayground',
+  'sqliteCrudPlayground',
+  'postgresqlCrudPlayground',
+  'truckList',
+  'vehicleManagement',
+  'auditLogManagement',
+  'userManagement',
+  'about',
+]
+
+// Normalize usernames so login lookups stay stable.
 function normalizeUsername(value: string) {
   return value.trim().toLowerCase()
 }
 
+// Resolve role-based permissions for the current account.
 export function getRolePermissions(role: UserRole) {
   return rolePermissionMap[role]
 }
 
+// Current version returns every page and leaves real filtering for a later step.
+function getAccessibleMenus() {
+  return [...defaultMenuKeys]
+}
+
+// Build the authenticated user shape stored on the request context.
 export function buildAuthenticatedUser(payload: JwtPayload): AuthenticatedUser {
   return {
     id: payload.sub,
@@ -47,6 +68,7 @@ export function buildAuthenticatedUser(payload: JwtPayload): AuthenticatedUser {
   }
 }
 
+// Build the session payload returned to the frontend.
 function buildAuthSession(user: {
   id: number
   username: string
@@ -73,31 +95,33 @@ function buildAuthSession(user: {
       name: user.name,
       role: user.role,
     },
+    menus: getAccessibleMenus(),
   }
 }
 
+// Validate credentials and issue a fresh session.
 export async function authenticateUser(payload: LoginRequestBody): Promise<AuthSession> {
   const username = payload.username.trim()
   const password = payload.password.trim()
 
   if (!username || !password) {
-    throw new AppError('请输入用户名和密码。', 400)
+    throw new AppError('Please enter username and password.', 400)
   }
 
   const account = await findUserByUsername(normalizeUsername(username))
 
   if (!account) {
-    throw new AppError('用户名或密码错误。', 401)
+    throw new AppError('Invalid username or password.', 401)
   }
 
   const passwordMatched = await verifyPassword(password, account.password)
 
   if (!passwordMatched) {
-    throw new AppError('用户名或密码错误。', 401)
+    throw new AppError('Invalid username or password.', 401)
   }
 
   if (account.status !== 'active') {
-    throw new AppError('当前账号已被禁用。', 403)
+    throw new AppError('This account is disabled.', 403)
   }
 
   if (!isHashedPassword(account.password)) {
@@ -113,21 +137,22 @@ export async function authenticateUser(payload: LoginRequestBody): Promise<AuthS
   })
 }
 
+// Validate the access token and refresh user state from PostgreSQL.
 export async function verifyAccessToken(token: string) {
   const payload = verifyJwt(token, env.authJwtSecret)
 
   if (!payload) {
-    throw new AppError('登录状态无效，请重新登录。', 401)
+    throw new AppError('Your session is invalid. Please sign in again.', 401)
   }
 
   const dbUser = await findUserById(payload.sub)
 
   if (!dbUser) {
-    throw new AppError('当前登录用户不存在。', 401)
+    throw new AppError('The current user no longer exists.', 401)
   }
 
   if (dbUser.status !== 'active') {
-    throw new AppError('当前账号已被禁用。', 403)
+    throw new AppError('This account is disabled.', 403)
   }
 
   return buildAuthenticatedUser({
@@ -138,6 +163,7 @@ export async function verifyAccessToken(token: string) {
   })
 }
 
+// Rebuild the current session for refresh-time login restoration.
 export async function getCurrentAuthSession(token: string): Promise<AuthSession> {
   const authUser = await verifyAccessToken(token)
 

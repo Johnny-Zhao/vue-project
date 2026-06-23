@@ -21,6 +21,44 @@ async function initializeDatabase(connection: Pool) {
   }
 
   await connection.query(`
+    CREATE TABLE IF NOT EXISTS fleet_vehicles (
+      id SERIAL PRIMARY KEY,
+      plate_number VARCHAR(20) NOT NULL UNIQUE,
+      vehicle_type VARCHAR(20) NOT NULL,
+      drive_type VARCHAR(20) NOT NULL,
+      energy_type VARCHAR(20) NOT NULL,
+      brand_model VARCHAR(60) NOT NULL,
+      vin VARCHAR(30) NOT NULL DEFAULT '',
+      axle_count INTEGER,
+      load_capacity DOUBLE PRECISION,
+      status VARCHAR(20) NOT NULL,
+      remark VARCHAR(300) NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      created_by INTEGER NOT NULL,
+      created_by_name VARCHAR(30) NOT NULL,
+      updated_by INTEGER NOT NULL,
+      updated_by_name VARCHAR(30) NOT NULL
+    );
+  `)
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id SERIAL PRIMARY KEY,
+      module VARCHAR(40) NOT NULL,
+      action VARCHAR(20) NOT NULL,
+      entity_id INTEGER NOT NULL,
+      entity_name VARCHAR(120) NOT NULL,
+      before_data JSONB,
+      after_data JSONB,
+      operator_id INTEGER NOT NULL,
+      operator_name VARCHAR(30) NOT NULL,
+      request_id VARCHAR(80) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+  `)
+
+  await connection.query(`
     CREATE TABLE IF NOT EXISTS app_users (
       id SERIAL PRIMARY KEY,
       username VARCHAR(30) NOT NULL UNIQUE,
@@ -82,9 +120,9 @@ async function initializeDatabase(connection: Pool) {
   const taskCountResult = await connection.query<{ count: string }>(
     'SELECT COUNT(*)::text AS count FROM tutorial_tasks',
   )
-  const total = Number(taskCountResult.rows[0]?.count || 0)
+  const taskTotal = Number(taskCountResult.rows[0]?.count || 0)
 
-  if (total === 0) {
+  if (taskTotal === 0) {
     const now = new Date().toISOString()
     await connection.query(
       `
@@ -116,6 +154,91 @@ async function initializeDatabase(connection: Pool) {
         'Use a real PostgreSQL table to drive create, edit, delete, and filter flows.',
         now,
         now,
+      ],
+    )
+  }
+
+  const vehicleCountResult = await connection.query<{ count: string }>(
+    'SELECT COUNT(*)::text AS count FROM fleet_vehicles',
+  )
+  const vehicleTotal = Number(vehicleCountResult.rows[0]?.count || 0)
+
+  if (vehicleTotal === 0) {
+    const now = new Date().toISOString()
+    await connection.query(
+      `
+        INSERT INTO fleet_vehicles (
+          plate_number,
+          vehicle_type,
+          drive_type,
+          energy_type,
+          brand_model,
+          vin,
+          axle_count,
+          load_capacity,
+          status,
+          remark,
+          created_at,
+          updated_at,
+          created_by,
+          created_by_name,
+          updated_by,
+          updated_by_name
+        )
+        VALUES
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16),
+          ($17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32),
+          ($33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48)
+      `,
+      [
+        'SU-A12345',
+        'tractor',
+        '6x4',
+        'diesel',
+        'FAW J6P',
+        'LNBSCB3H0GA000001',
+        3,
+        32,
+        'active',
+        'Primary line-haul tractor.',
+        now,
+        now,
+        1,
+        'Admin User',
+        1,
+        'Admin User',
+        'SH-B67890',
+        'truck',
+        '4x2',
+        'electric',
+        'BYD T5',
+        'LNBSCB3H0GA000002',
+        2,
+        8,
+        'maintenance',
+        'City delivery vehicle under maintenance.',
+        now,
+        now,
+        1,
+        'Admin User',
+        1,
+        'Admin User',
+        'GD-C24680',
+        'van',
+        '4x2',
+        'hybrid',
+        'Foton Scenic',
+        'LNBSCB3H0GA000003',
+        2,
+        3.5,
+        'inactive',
+        'Backup vehicle not currently dispatched.',
+        now,
+        now,
+        1,
+        'Admin User',
+        1,
+        'Admin User',
       ],
     )
   }
