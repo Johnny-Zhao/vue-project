@@ -12,6 +12,11 @@ export interface AiAssistResult {
   notice?: string
 }
 
+export interface VehicleAiAssistRequestDto {
+  vehicle: VehicleAiAssistDto
+  forceRefresh?: boolean
+}
+
 export interface TruckAssistFlags {
   missingTractorPlate: boolean
   missingTrailerPlate: boolean
@@ -40,4 +45,67 @@ export interface TruckAiAssistDto {
   updatedAt: string
   flags: TruckAssistFlags
   metrics: TruckAssistMetrics
+}
+
+export interface VehicleAssistFlags {
+  missingVin: boolean
+  missingBrandModel: boolean
+  missingAxleCount: boolean
+  missingLoadCapacity: boolean
+  staleRecord: boolean
+  inactiveStatus: boolean
+  maintenanceStatus: boolean
+  suspiciousPlateNumber: boolean
+  emptyRemark: boolean
+}
+
+export interface VehicleAssistMetrics {
+  loadCapacity: number | null
+  daysSinceUpdate: number | null
+}
+
+export interface VehicleAiAssistDto {
+  id: number
+  plateNumber: string
+  vehicleType: string
+  driveType: string
+  energyType: string
+  brandModel: string
+  vin: string
+  axleCount: number | null
+  loadCapacity: number | null
+  status: string
+  remark: string
+  updatedBy: string
+  updatedAt: string
+  flags: VehicleAssistFlags
+  metrics: VehicleAssistMetrics
+}
+
+export interface VehicleAiAnalysisEntity {
+  vehicleId: number
+  summary: string[]
+  risks: string[]
+  nextActions: string[]
+  confidence: AiConfidence
+  source: AiSource
+  generatedAt: string
+  notice?: string
+  sourceUpdatedAt: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface VehicleAiAnalysisRow {
+  vehicleId: number | string
+  summary: unknown
+  risks: unknown
+  nextActions: unknown
+  confidence: AiConfidence
+  source: AiSource
+  generatedAt: string
+  notice?: string | null
+  sourceUpdatedAt: string
+  createdAt: string
+  updatedAt: string
 }

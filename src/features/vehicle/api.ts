@@ -1,7 +1,10 @@
 import { requestApi } from '@/api/request'
+import type { AiAssistResult } from '@/services/ai/types'
 import type {
   CreateVehiclePayload,
   UpdateVehiclePayload,
+  VehicleAiAssistDto,
+  VehicleAiAssistRequest,
   VehicleItem,
   VehicleListQuery,
   VehiclePageResult,
@@ -54,5 +57,16 @@ export function deleteVehicleApi(id: number) {
     url: `/vehicles/${id}`,
     method: 'DELETE',
     baseURL: API_BASE_URL,
+  })
+}
+
+// 生成车辆档案 AI 摘要与异常提示。
+export function generateVehicleAssistApi(payload: VehicleAiAssistRequest) {
+  return requestApi<AiAssistResult, VehicleAiAssistRequest>({
+    url: '/ai/vehicle-assist',
+    method: 'POST',
+    data: payload,
+    baseURL: API_BASE_URL,
+    suppressGlobalErrorMessage: true,
   })
 }

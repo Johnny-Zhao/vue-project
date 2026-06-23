@@ -6,11 +6,13 @@ import EntityForm from '@/components/EntityForm.vue'
 import QueryFilterForm from '@/components/QueryFilterForm.vue'
 import type { FormModel, TableColumnSchema, TablePagination } from '@/components/formSchemas'
 import { useDialog } from '@/composables/useDialog'
+import type { AiAssistResult } from '@/services/ai/types'
 import {
   createVehicleApi,
   deleteVehicleApi,
   fetchVehicleDetailApi,
   fetchVehiclesApi,
+  generateVehicleAssistApi,
   updateVehicleApi,
 } from '@/features/vehicle/api'
 import {
@@ -28,6 +30,7 @@ import {
 import type {
   CreateVehiclePayload,
   UpdateVehiclePayload,
+  VehicleAiAssistDto,
   VehicleItem,
   VehicleListQuery,
   VehicleQueryForm,
@@ -38,9 +41,14 @@ type TableSortOrder = 'ascending' | 'descending' | null
 
 const loading = ref(false)
 const saving = ref(false)
+const aiLoading = ref(false)
 const deletingId = ref<number | null>(null)
 const requestError = ref('')
+const aiError = ref('')
 const selectedVehicleId = ref<number | null>(null)
+const aiDrawerVisible = ref(false)
+const aiVehicle = ref<VehicleItem | null>(null)
+const aiResult = ref<AiAssistResult | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -135,6 +143,41 @@ function resolveErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '请求失败，请稍后重试'
 }
 
+// 格式化 AI 分析置信度展示文本。
+function formatConfidence(value: AiAssistResult['confidence']) {
+  return value === 'high' ? '高' : value === 'medium' ? '中' : '低'
+}
+
+// 格式化 AI 分析来源展示文本。
+function formatAiSource(value: AiAssistResult['source']) {
+  if (value === 'api') {
+    return 'OpenAI'
+  }
+
+  if (value === 'mock') {
+    return '规则兜底'
+  }
+
+  return '降级结果'
+}
+
+// 判断车牌号格式是否存在可疑情况。
+function isSuspiciousPlateNumber(value: string) {
+  return !/^[A-Z]{2}-[A-Z0-9]{5,8}$/.test(value.trim().toUpperCase())
+}
+
+// 计算距离最近更新时间已过去多少天。
+function getDaysSince(value: string) {
+  const timestamp = Date.parse(value)
+
+  if (Number.isNaN(timestamp)) {
+    return null
+  }
+
+  const diff = Date.now() - timestamp
+  return diff < 0 ? 0 : Math.floor(diff / (1000 * 60 * 60 * 24))
+}
+
 // 组装车辆列表查询参数。
 function createRequestPayload(): VehicleListQuery {
   const createdAtRange = Array.isArray(queryModel.value.createdAtRange)
@@ -188,10 +231,83 @@ async function loadVehicles(options: { resetPage?: boolean } = {}) {
   }
 }
 
+// 根据当前车辆行构建 AI 分析请求体。
+function createVehicleAssistPayload(row: VehicleItem): VehicleAiAssistDto {
+  const daysSinceUpdate = getDaysSince(row.updatedAt)
+
+  return {
+    id: row.id,
+    plateNumber: row.plateNumber,
+    vehicleType: formatVehicleType(row.vehicleType),
+    driveType: formatVehicleDriveType(row.driveType),
+    energyType: formatVehicleEnergyType(row.energyType),
+    brandModel: row.brandModel.trim(),
+    vin: row.vin.trim(),
+    axleCount: row.axleCount,
+    loadCapacity: row.loadCapacity,
+    status: formatVehicleStatus(row.status),
+    remark: row.remark.trim(),
+    updatedBy: row.updatedBy.trim(),
+    updatedAt: row.updatedAt,
+    flags: {
+      missingVin: !row.vin.trim(),
+      missingBrandModel: !row.brandModel.trim(),
+      missingAxleCount: row.axleCount == null,
+      missingLoadCapacity: row.loadCapacity == null,
+      staleRecord: daysSinceUpdate !== null && daysSinceUpdate > 30,
+      inactiveStatus: row.status === 'inactive',
+      maintenanceStatus: row.status === 'maintenance',
+      suspiciousPlateNumber: isSuspiciousPlateNumber(row.plateNumber),
+      emptyRemark: !row.remark.trim(),
+    },
+    metrics: {
+      loadCapacity: row.loadCapacity,
+      daysSinceUpdate,
+    },
+  }
+}
+
 // 重置弹窗表单数据。
 function resetForm() {
   selectedVehicleId.value = null
   formModel.value = createVehicleFormInitialValue()
+}
+
+// 打开 AI 分析抽屉，并优先读取数据库中的已保存结果。
+async function openAiDrawer(row: VehicleItem, options: { forceRefresh?: boolean } = {}) {
+  aiDrawerVisible.value = true
+  aiVehicle.value = row
+  aiResult.value = null
+  aiError.value = ''
+  aiLoading.value = true
+
+  try {
+    aiResult.value = await generateVehicleAssistApi({
+      vehicle: createVehicleAssistPayload(row),
+      forceRefresh: options.forceRefresh,
+    })
+  } catch (error) {
+    aiError.value = resolveErrorMessage(error)
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+// 强制重新分析当前车辆，并覆盖数据库中的最新结果。
+async function refreshAiResult() {
+  if (!aiVehicle.value) {
+    return
+  }
+
+  await openAiDrawer(aiVehicle.value, { forceRefresh: true })
+}
+
+// 关闭 AI 分析抽屉并清理状态。
+function closeAiDrawer() {
+  aiDrawerVisible.value = false
+  aiVehicle.value = null
+  aiResult.value = null
+  aiError.value = ''
 }
 
 // 打开新增车辆弹窗。
@@ -199,6 +315,31 @@ function openCreateDialog() {
   requestError.value = ''
   resetForm()
   vehicleDialog.openCreate()
+}
+
+// 复制 AI 分析结果，方便演示展示。
+async function copyAiResult() {
+  if (!aiResult.value) {
+    return
+  }
+
+  const content = [
+    'AI 摘要',
+    ...aiResult.value.summary.map((item, index) => `${index + 1}. ${item}`),
+    '',
+    '异常与风险提示',
+    ...aiResult.value.risks.map((item, index) => `${index + 1}. ${item}`),
+    '',
+    '下一步建议',
+    ...aiResult.value.nextActions.map((item, index) => `${index + 1}. ${item}`),
+  ].join('\n')
+
+  try {
+    await navigator.clipboard.writeText(content)
+    ElMessage.success('AI 分析结果已复制')
+  } catch {
+    ElMessage.error('复制失败，请稍后重试')
+  }
 }
 
 // 打开编辑弹窗并加载车辆详情。
@@ -381,6 +522,7 @@ void loadVehicles()
     >
       <template #operation="{ row }">
         <el-button link type="primary" @click.stop="openEditDialog(row)">编辑</el-button>
+        <el-button link type="warning" @click.stop="openAiDrawer(row)">AI 分析</el-button>
         <el-button
           link
           type="danger"
@@ -411,6 +553,101 @@ void loadVehicles()
         @cancel="closeDialog"
       />
     </el-dialog>
+
+    <el-drawer
+      v-model="aiDrawerVisible"
+      title="车辆 AI 摘要与异常识别"
+      size="720px"
+      destroy-on-close
+      @closed="closeAiDrawer"
+    >
+      <section v-if="aiVehicle" class="ai-shell">
+        <div class="ai-head-card">
+          <div>
+            <p class="eyebrow">AI 助手</p>
+            <h3>{{ aiVehicle.plateNumber }}</h3>
+            <p class="intro">
+              基于当前车辆档案自动生成摘要、异常录入提示和下一步建议，方便在面试中演示 AI
+              与业务数据的结合。
+            </p>
+          </div>
+
+          <div class="ai-head-actions">
+            <el-button :loading="aiLoading" @click="refreshAiResult">重新分析</el-button>
+            <el-button
+              type="primary"
+              plain
+              :disabled="!aiResult || aiLoading"
+              @click="copyAiResult"
+            >
+              复制结果
+            </el-button>
+          </div>
+        </div>
+
+        <div class="ai-detail-grid">
+          <article class="ai-detail-card">
+            <span>车辆类型</span>
+            <strong>{{ formatVehicleType(aiVehicle.vehicleType) }}</strong>
+          </article>
+          <article class="ai-detail-card">
+            <span>驱动形式</span>
+            <strong>{{ formatVehicleDriveType(aiVehicle.driveType) }}</strong>
+          </article>
+          <article class="ai-detail-card">
+            <span>能源类型</span>
+            <strong>{{ formatVehicleEnergyType(aiVehicle.energyType) }}</strong>
+          </article>
+          <article class="ai-detail-card">
+            <span>状态</span>
+            <strong>{{ formatVehicleStatus(aiVehicle.status) }}</strong>
+          </article>
+          <article class="ai-detail-card">
+            <span>品牌型号</span>
+            <strong>{{ aiVehicle.brandModel || '-' }}</strong>
+          </article>
+          <article class="ai-detail-card">
+            <span>更新人</span>
+            <strong>{{ aiVehicle.updatedBy || '-' }}</strong>
+          </article>
+        </div>
+
+        <div v-if="aiLoading" class="ai-placeholder">正在生成车辆 AI 分析结果...</div>
+        <div v-else-if="aiError" class="ai-error">{{ aiError }}</div>
+
+        <div v-else-if="aiResult" class="ai-result">
+          <div class="ai-meta">
+            <span>置信度：{{ formatConfidence(aiResult.confidence) }}</span>
+            <span>来源：{{ formatAiSource(aiResult.source) }}</span>
+            <span v-if="aiResult.cached">缓存结果</span>
+            <span>生成时间：{{ aiResult.generatedAt }}</span>
+          </div>
+
+          <p v-if="aiResult.notice" class="ai-notice">{{ aiResult.notice }}</p>
+
+          <section class="ai-panel">
+            <h4>AI 摘要</h4>
+            <ul>
+              <li v-for="item in aiResult.summary" :key="item">{{ item }}</li>
+            </ul>
+          </section>
+
+          <section class="ai-panel">
+            <h4>异常与风险提示</h4>
+            <ul>
+              <li v-for="item in aiResult.risks" :key="item">{{ item }}</li>
+            </ul>
+          </section>
+
+          <section class="ai-panel">
+            <h4>下一步建议</h4>
+            <ul>
+              <li v-for="item in aiResult.nextActions" :key="item">{{ item }}</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+    </el-drawer>
   </section>
 </template>
 
@@ -468,11 +705,132 @@ void loadVehicles()
   }
 }
 
+.ai-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .ai-head-card,
+  .ai-panel,
+  .ai-detail-card {
+    border: 1px solid rgba(29, 59, 54, 0.08);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.92);
+  }
+
+  .ai-head-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+
+    h3 {
+      margin-top: 0.35rem;
+      color: #173937;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .ai-head-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+  }
+
+  .ai-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+
+    .ai-detail-card {
+      padding: 1rem 1.1rem;
+      background: #f6f8f7;
+
+      span {
+        color: #66706d;
+        font-size: 0.88rem;
+      }
+
+      strong {
+        display: block;
+        margin-top: 0.35rem;
+        color: #173937;
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .ai-placeholder,
+  .ai-error,
+  .ai-notice {
+    padding: 1rem 1.1rem;
+    border-radius: 18px;
+  }
+
+  .ai-placeholder {
+    background: #f6f8f7;
+    color: #556260;
+  }
+
+  .ai-error {
+    background: rgba(245, 108, 108, 0.12);
+    color: #c45656;
+  }
+
+  .ai-result {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .ai-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    color: #7a5d2d;
+    font-size: 0.88rem;
+  }
+
+  .ai-notice {
+    background: #fcf2df;
+    color: #7a5d2d;
+  }
+
+  .ai-panel {
+    padding: 1rem 1.1rem;
+    background: #f6f8f7;
+
+    h4 {
+      color: #173937;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    ul {
+      margin-top: 0.75rem;
+      padding-left: 1.15rem;
+      color: #4f5a58;
+      display: grid;
+      gap: 0.55rem;
+    }
+  }
+}
+
 @media (max-width: 980px) {
   .vehicle-page {
     .page-head {
       flex-direction: column;
       align-items: stretch;
+    }
+  }
+
+  .ai-shell {
+    .ai-head-card,
+    .ai-detail-grid {
+      flex-direction: column;
+      grid-template-columns: 1fr;
     }
   }
 }

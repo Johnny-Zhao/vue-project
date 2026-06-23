@@ -43,6 +43,22 @@ async function initializeDatabase(connection: Pool) {
   `)
 
   await connection.query(`
+    CREATE TABLE IF NOT EXISTS vehicle_ai_analysis (
+      vehicle_id INTEGER PRIMARY KEY REFERENCES fleet_vehicles (id) ON DELETE CASCADE,
+      summary_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      risks_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      next_actions_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      confidence VARCHAR(20) NOT NULL,
+      source VARCHAR(20) NOT NULL,
+      generated_at TIMESTAMPTZ NOT NULL,
+      notice VARCHAR(300),
+      source_updated_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    );
+  `)
+
+  await connection.query(`
     CREATE TABLE IF NOT EXISTS audit_logs (
       id SERIAL PRIMARY KEY,
       module VARCHAR(40) NOT NULL,

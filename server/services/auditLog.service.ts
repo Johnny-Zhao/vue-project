@@ -2,8 +2,8 @@ import type { AuditAction, AuditModule } from '../types/audit.ts'
 import type { AuditLogPageResult, AuditLogQuery } from '../types/auditLog.ts'
 import { listAuditLogs as listAuditLogRecords } from '../pg/repositories/auditLogQuery.repository.ts'
 
-const allowedModules: AuditModule[] = ['vehicle']
-const allowedActions: AuditAction[] = ['create', 'update', 'delete']
+const allowedModules: AuditModule[] = ['vehicle', 'vehicleAi']
+const allowedActions: AuditAction[] = ['create', 'update', 'delete', 'analyze']
 
 // 规范化文本查询条件。
 function normalizeText(value: unknown, maxLength: number) {

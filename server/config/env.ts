@@ -24,6 +24,7 @@ export interface ServerEnv {
   postgresSchema: string
   postgresSsl: boolean
   openaiApiKey: string
+  openaiBaseUrl: string
   openaiModel: string
   openaiTimeoutMs: number
   openaiStore: boolean
@@ -43,6 +44,7 @@ export const env: ServerEnv = {
   postgresSchema: process.env.POSTGRES_SCHEMA || 'public',
   postgresSsl: process.env.POSTGRES_SSL === 'true',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
+  openaiBaseUrl: process.env.OPENAI_BASE_URL || '',
   openaiModel: process.env.OPENAI_MODEL || 'gpt-5.4',
   openaiTimeoutMs: Number(process.env.OPENAI_TIMEOUT_MS || 30000),
   openaiStore: process.env.OPENAI_STORE === 'true',

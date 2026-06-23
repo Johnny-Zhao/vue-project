@@ -97,14 +97,25 @@ export default defineConfig({
   // outputDir: 'test-results/',
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    /**
-     * Use the dev server by default for faster feedback loop.
-     * Use the preview server on CI for more realistic testing.
-     * Playwright will re-use the local server if there is already a dev-server running.
-     */
-    command: process.env.CI ? 'npm run preview' : 'npm run dev',
-    port: process.env.CI ? 4173 : 5173,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      /**
+       * Start the backend API for authenticated and CRUD E2E flows.
+       */
+      command: process.env.CI ? 'npm run server:start' : 'npm run server:dev',
+      port: 3001,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+    {
+      /**
+       * Use the dev server by default for faster feedback loop.
+       * Use the preview server on CI for more realistic testing.
+       */
+      command: process.env.CI ? 'npm run preview' : 'npm run dev',
+      port: process.env.CI ? 4173 : 5173,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
 })

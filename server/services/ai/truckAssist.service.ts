@@ -45,6 +45,7 @@ export async function generateTruckAssistResult(dto: TruckAiAssistDto): Promise<
 
 async function requestOpenAiTruckAssist(dto: TruckAiAssistDto): Promise<OpenAiNormalizedResult> {
   const client = getOpenAiClient()
+  console.log(client, 11111111)
 
   const response = (await client.responses.create({
     model: env.openaiModel,

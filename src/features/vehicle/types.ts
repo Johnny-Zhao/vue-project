@@ -77,3 +77,39 @@ export interface VehicleQueryForm {
   createdAtRange: string[]
   updatedAtRange: string[]
 }
+
+export interface VehicleAiAssistDto {
+  id: number
+  plateNumber: string
+  vehicleType: string
+  driveType: string
+  energyType: string
+  brandModel: string
+  vin: string
+  axleCount: number | null
+  loadCapacity: number | null
+  status: string
+  remark: string
+  updatedBy: string
+  updatedAt: string
+  flags: {
+    missingVin: boolean
+    missingBrandModel: boolean
+    missingAxleCount: boolean
+    missingLoadCapacity: boolean
+    staleRecord: boolean
+    inactiveStatus: boolean
+    maintenanceStatus: boolean
+    suspiciousPlateNumber: boolean
+    emptyRemark: boolean
+  }
+  metrics: {
+    loadCapacity: number | null
+    daysSinceUpdate: number | null
+  }
+}
+
+export interface VehicleAiAssistRequest {
+  vehicle: VehicleAiAssistDto
+  forceRefresh?: boolean
+}
