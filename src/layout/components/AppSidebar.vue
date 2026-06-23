@@ -100,7 +100,6 @@ async function handleLogout() {
   flex-direction: column;
   gap: 0.9rem;
   padding: 1rem;
-  border-radius: 22px;
   background:
     radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 28%),
     linear-gradient(180deg, #0f172a, #111827 52%, #172033);

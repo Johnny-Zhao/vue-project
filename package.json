@@ -23,6 +23,7 @@
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
+    "mcp:browser": "node --import jiti/register mcp/local-browser.ts",
     "mcp:postgres": "node --import jiti/register mcp/local-postgres.ts",
     "mcp:postgres:test": "node --import jiti/register mcp/local-postgres.ts --test-connection",
     "prepare": "husky"

@@ -1,5 +1,10 @@
 {
   "mcpServers": {
+    "local-browser": {
+      "command": "node",
+      "args": ["--import", "jiti/register", "mcp/local-browser.ts"],
+      "cwd": "E:\\Web\\Personal\\TS\\vue-project"
+    },
     "local-postgres": {
       "command": "node",
       "args": ["--import", "jiti/register", "mcp/local-postgres.ts"],
