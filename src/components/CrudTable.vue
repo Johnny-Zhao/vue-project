@@ -114,6 +114,7 @@ function resolveColumnProp(prop: string | number | symbol | undefined): string |
           v-for="action in batchActions"
           :key="action.key"
           :type="action.type ?? 'primary'"
+          size="small"
           plain
           :disabled="isBatchActionDisabled(action)"
           @click="handleBatchAction(action.key)"
@@ -128,6 +129,7 @@ function resolveColumnProp(prop: string | number | symbol | undefined): string |
       :row-key="rowKey"
       border
       stripe
+      size="small"
       :empty-text="emptyText"
       v-loading="loading"
       class="crud-table"
@@ -168,6 +170,7 @@ function resolveColumnProp(prop: string | number | symbol | undefined): string |
 
     <div class="crud-pagination">
       <el-pagination
+        size="small"
         :current-page="pagination.currentPage"
         :page-size="pagination.pageSize"
         :page-sizes="pagination.pageSizes ?? [10, 20, 50, 100]"
@@ -180,43 +183,77 @@ function resolveColumnProp(prop: string | number | symbol | undefined): string |
   </section>
 </template>
 
-<style scoped>
+<style scoped lang="less">
 .crud-table-shell {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
-  border-radius: 24px;
-  border: 1px solid rgba(29, 59, 54, 0.08);
-  background: rgba(255, 255, 255, 0.78);
+  gap: 0.7rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+  border: 1px solid #d8e2f0;
+  border-radius: 0;
+  background: #ffffff;
 }
 
 .crud-table-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .selection-summary {
-  color: #66706d;
-  font-size: 0.92rem;
+  color: #64748b;
+  font-size: 0.8rem;
 }
 
 .batch-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
+
+  :deep(.el-button) {
+    border-radius: 0;
+    font-size: 0.8rem;
+  }
 }
 
 .crud-pagination {
   display: flex;
   justify-content: flex-end;
+
+  :deep(.el-pagination) {
+    gap: 0.2rem;
+    font-size: 0.8rem;
+  }
+
+  :deep(.btn-prev),
+  :deep(.btn-next),
+  :deep(.el-pager li) {
+    border-radius: 0;
+  }
 }
 
 :deep(.crud-table .el-table__row) {
   cursor: pointer;
+}
+
+:deep(.crud-table th.el-table__cell) {
+  padding: 7px 0;
+  background: #f7f9fc;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+:deep(.crud-table td.el-table__cell) {
+  padding: 6px 0;
+  color: #334155;
+  font-size: 0.8rem;
+}
+
+:deep(.crud-table .cell) {
+  line-height: 1.35;
 }
 
 @media (max-width: 768px) {

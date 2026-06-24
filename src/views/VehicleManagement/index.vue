@@ -497,21 +497,6 @@ void loadVehicles()
 
 <template>
   <section class="vehicle-page">
-    <div class="page-head">
-      <div>
-        <p class="eyebrow">车辆档案</p>
-        <h2>车辆管理</h2>
-        <p class="intro">
-          维护车辆基础资料，支持查询、增删改查、审计留痕，并为后续 AI 分析能力预留数据基础。
-        </p>
-      </div>
-
-      <div class="head-actions">
-        <el-button :loading="loading" @click="loadVehicles({ resetPage: true })">刷新</el-button>
-        <el-button type="primary" @click="openCreateDialog">新增车辆</el-button>
-      </div>
-    </div>
-
     <QueryFilterForm
       v-model="queryModel"
       :fields="queryFields"
@@ -524,6 +509,11 @@ void loadVehicles()
     />
 
     <div v-if="requestError" class="error-banner">{{ requestError }}</div>
+
+    <div class="head-actions">
+      <el-button :loading="loading" @click="loadVehicles({ resetPage: true })">刷新</el-button>
+      <el-button type="primary" @click="openCreateDialog">新增车辆</el-button>
+    </div>
 
     <CrudTable
       :rows="vehicles"
@@ -730,45 +720,6 @@ void loadVehicles()
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-
-  .page-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1.5rem;
-    border: 1px solid rgba(29, 59, 54, 0.1);
-    border-radius: 28px;
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow: 0 18px 40px rgba(19, 35, 33, 0.08);
-
-    .eyebrow {
-      color: #7a5d2d;
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    h2 {
-      margin-top: 0.35rem;
-      color: #173937;
-      font-size: 1.75rem;
-      font-weight: 700;
-    }
-
-    .intro {
-      max-width: 44rem;
-      margin-top: 0.75rem;
-      color: #556260;
-    }
-
-    .head-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-    }
-  }
 
   .error-banner {
     padding: 1rem 1.2rem;

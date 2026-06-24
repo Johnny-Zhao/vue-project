@@ -81,7 +81,7 @@ const currentPageHint = computed(() => {
   gap: 1rem;
   min-height: 56px;
   padding: 0 18px;
-  background: linear-gradient(90deg, #3b73d8 0%, #4d84e4 55%, #5d91eb 100%);
+  background: linear-gradient(180deg, #0f2b57 0%, #133667 28%, #102c54 100%);
   color: #ffffff;
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.16);
 

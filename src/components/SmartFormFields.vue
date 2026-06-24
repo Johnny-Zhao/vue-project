@@ -9,9 +9,11 @@ const props = withDefaults(
   defineProps<{
     fields: FormFieldSchema[]
     columns?: number
+    inline?: boolean
   }>(),
   {
     columns: 2,
+    inline: false,
   },
 )
 
@@ -19,10 +21,12 @@ const emit = defineEmits<{
   fieldChange: [payload: { key: string; value: unknown; model: FormModel }]
 }>()
 
+// 过滤出当前可见字段，兼容动态显隐规则。
 const visibleFields = computed(() =>
   props.fields.filter((field) => evaluateFieldVisibility(field.visible, model.value, true)),
 )
 
+// 根据字段类型解析对应控件名称。
 function getComponentName(field: FormFieldSchema) {
   switch (field.type) {
     case 'textarea':
@@ -43,6 +47,7 @@ function getComponentName(field: FormFieldSchema) {
   }
 }
 
+// 为字段补齐默认占位文案。
 function getPlaceholder(field: FormFieldSchema) {
   if (field.placeholder) {
     return field.placeholder
@@ -50,7 +55,6 @@ function getPlaceholder(field: FormFieldSchema) {
 
   switch (field.type) {
     case 'select':
-      return `请选择${field.label}`
     case 'date':
     case 'daterange':
       return `请选择${field.label}`
@@ -59,10 +63,12 @@ function getPlaceholder(field: FormFieldSchema) {
   }
 }
 
+// 统一解析字段禁用态。
 function isFieldDisabled(field: FormFieldSchema) {
   return evaluateFieldVisibility(field.disabled, model.value, false)
 }
 
+// 为每个字段建立双向绑定，并在变更时触发联动。
 function getFieldModel(field: FormFieldSchema) {
   return computed({
     get: () => model.value[field.key],
@@ -73,6 +79,7 @@ function getFieldModel(field: FormFieldSchema) {
       }
 
       const linkageResult = field.onChange?.(value, nextModel)
+
       if (linkageResult) {
         nextModel = {
           ...nextModel,
@@ -90,17 +97,23 @@ function getFieldModel(field: FormFieldSchema) {
   })
 }
 
+// 解析字段跨列数，兼容默认值。
 function getFieldSpan(field: FormFieldSchema) {
   return field.span ?? 1
 }
 </script>
 
 <template>
-  <div class="smart-form-grid" :style="{ '--smart-form-columns': String(columns) }">
+  <div
+    class="smart-form-grid"
+    :class="{ 'smart-form-grid--inline': inline }"
+    :style="{ '--smart-form-columns': String(columns) }"
+  >
     <div
       v-for="field in visibleFields"
       :key="field.key"
       class="smart-form-item"
+      :class="{ 'smart-form-item--inline': inline }"
       :style="{ '--smart-form-span': String(getFieldSpan(field)) }"
     >
       <el-form-item :label="field.label" :prop="field.key" :required="field.required">
@@ -108,7 +121,15 @@ function getFieldSpan(field: FormFieldSchema) {
           :is="getComponentName(field)"
           v-model="getFieldModel(field).value"
           class="smart-field-control"
-          :type="field.type === 'textarea' ? 'textarea' : field.type === 'date' ? 'date' : field.type === 'daterange' ? 'daterange' : undefined"
+          :type="
+            field.type === 'textarea'
+              ? 'textarea'
+              : field.type === 'date'
+                ? 'date'
+                : field.type === 'daterange'
+                  ? 'daterange'
+                  : undefined
+          "
           :rows="field.type === 'textarea' ? 4 : undefined"
           :placeholder="field.type === 'checkbox' ? undefined : getPlaceholder(field)"
           :disabled="isFieldDisabled(field)"
@@ -133,28 +154,49 @@ function getFieldSpan(field: FormFieldSchema) {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="less">
 .smart-form-grid {
   display: grid;
   grid-template-columns: repeat(var(--smart-form-columns), minmax(0, 1fr));
   gap: 1rem;
-}
 
-.smart-form-item {
-  grid-column: span min(var(--smart-form-span), var(--smart-form-columns));
+  .smart-form-item {
+    grid-column: span min(var(--smart-form-span), var(--smart-form-columns));
+  }
 }
 
 .smart-field-control {
   width: 100%;
 }
 
+.smart-form-grid--inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.45rem 0.75rem;
+
+  .smart-form-item--inline {
+    flex: 0 0 auto;
+    min-width: 220px;
+    max-width: 320px;
+  }
+}
+
 @media (max-width: 900px) {
   .smart-form-grid {
     grid-template-columns: 1fr;
+
+    .smart-form-item {
+      grid-column: span 1;
+    }
   }
 
-  .smart-form-item {
-    grid-column: span 1;
+  .smart-form-grid--inline {
+    .smart-form-item--inline {
+      min-width: 100%;
+      max-width: none;
+      flex-basis: 100%;
+    }
   }
 }
 </style>

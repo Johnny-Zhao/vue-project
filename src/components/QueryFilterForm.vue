@@ -28,6 +28,7 @@ const emit = defineEmits<{
   fieldChange: [payload: { key: string; value: unknown; model: FormModel }]
 }>()
 
+// 透传表单模型，保持与父组件的双向绑定一致。
 const normalizedModel = computed({
   get: () => model.value,
   set: (value: FormModel) => {
@@ -35,10 +36,12 @@ const normalizedModel = computed({
   },
 })
 
+// 点击查询时抛出当前筛选条件。
 function handleSearch() {
   emit('search', { ...model.value })
 }
 
+// 点击重置时恢复为字段默认值。
 function handleReset() {
   const nextModel = createModelFromFields(props.fields)
   model.value = nextModel
@@ -48,17 +51,18 @@ function handleReset() {
 
 <template>
   <section class="query-form-shell">
-    <el-form :model="normalizedModel" label-position="top" class="query-form">
+    <el-form :model="normalizedModel" label-position="left" label-width="72px" class="query-form">
       <SmartFormFields
         v-model="normalizedModel"
         :fields="fields"
         :columns="columns"
+        inline
         @field-change="emit('fieldChange', $event)"
       />
 
       <div class="query-form-actions">
-        <el-button @click="handleReset">{{ resetText }}</el-button>
-        <el-button type="primary" :loading="loading" @click="handleSearch">
+        <el-button size="small" @click="handleReset">{{ resetText }}</el-button>
+        <el-button size="small" type="primary" :loading="loading" @click="handleSearch">
           {{ submitText }}
         </el-button>
       </div>
@@ -66,23 +70,83 @@ function handleReset() {
   </section>
 </template>
 
-<style scoped>
+<style scoped lang="less">
 .query-form-shell {
-  padding: 1.25rem;
-  border-radius: 24px;
-  border: 1px solid rgba(29, 59, 54, 0.08);
-  background: rgba(255, 255, 255, 0.76);
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #d8e2f0;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.query-form {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+
+  :deep(.el-form-item) {
+    margin-bottom: 0;
+  }
+
+  :deep(.el-form-item__label) {
+    height: 28px;
+    padding-right: 0.45rem;
+    color: #334155;
+    font-size: 0.8rem;
+    line-height: 28px;
+  }
+
+  :deep(.el-input__wrapper),
+  :deep(.el-textarea__wrapper),
+  :deep(.el-select__wrapper),
+  :deep(.el-date-editor.el-input__wrapper),
+  :deep(.el-date-editor.el-range-editor) {
+    min-height: 28px;
+    border-radius: 0;
+    box-shadow: 0 0 0 1px #d4dceb inset;
+  }
+
+  :deep(.el-input__inner),
+  :deep(.el-select__placeholder),
+  :deep(.el-range-input) {
+    font-size: 0.8rem;
+  }
+
+  :deep(.el-input-number) {
+    width: 100%;
+  }
+
+  :deep(.el-switch) {
+    height: 28px;
+  }
 }
 
 .query-form-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.45rem;
+  margin-left: auto;
+
+  :deep(.el-button) {
+    min-height: 28px;
+    padding: 6px 12px;
+    border-radius: 0;
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 768px) {
+  .query-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .query-form-actions {
-    justify-content: stretch;
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
   }
 }
 </style>
