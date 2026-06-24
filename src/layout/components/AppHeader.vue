@@ -8,130 +8,176 @@ const route = useRoute()
 const authStore = useAuthStore()
 const { user } = storeToRefs(authStore)
 
+// 计算当前页面标题，保持顶部导航与路由元信息一致。
 const currentPageTitle = computed(() => String(route.meta.title ?? '控制台'))
 
+// 根据当前路由生成简短提示，让顶部说明更像业务后台导航条。
 const currentPageHint = computed(() => {
   if (route.name === 'home') {
-    return '查看任务看板、角色权限差异，以及页面级交互。'
+    return '查看任务看板、权限差异和整体链路状态'
   }
 
   if (route.name === 'about') {
-    return '浏览项目里的 TypeScript 笔记和补充说明。'
+    return '浏览项目说明、技术背景和补充记录'
   }
 
   if (route.name === 'taskCreate') {
-    return '使用统一表单能力创建新的任务记录。'
-  }
-
-  if (route.name === 'truckList') {
-    return '查看车辆列表、详情信息，以及 AI 辅助分析结果。'
+    return '录入任务并演示统一表单与提交链路'
   }
 
   if (route.name === 'sqliteCrudPlayground') {
-    return '观察 SQLite 版本的请求链路和 CRUD 交互。'
+    return '演示 SQLite 版本的接口请求与增删改查流程'
   }
 
   if (route.name === 'postgresqlCrudPlayground') {
-    return '观察 PostgreSQL 版本的请求链路和 CRUD 交互。'
+    return '演示 PostgreSQL 版本的接口请求与增删改查流程'
   }
 
   if (route.name === 'userManagement') {
-    return '维护 PostgreSQL 用户表，直接影响后端登录和 JWT 鉴权结果。'
+    return '维护用户、角色和登录鉴权链路'
   }
 
-  return '浏览当前页面内容。'
+  if (route.name === 'vehicleManagement') {
+    return '维护车辆档案、AI 分析结果和审计留痕'
+  }
+
+  if (route.name === 'aiConfigManagement') {
+    return '集中维护 AI 运行配置与开关策略'
+  }
+
+  if (route.name === 'auditLogManagement') {
+    return '查看关键操作日志并追踪问题链路'
+  }
+
+  return '浏览当前模块内容'
 })
 </script>
 
 <template>
   <header class="shell-topbar">
-    <div class="topbar-main">
-      <p class="page-eyebrow">当前页面</p>
-      <h2>{{ currentPageTitle }}</h2>
+    <div class="topbar-left">
+      <div class="title-group">
+        <p class="page-label">业务控制台</p>
+        <h2>{{ currentPageTitle }}</h2>
+      </div>
+
       <p class="page-hint">{{ currentPageHint }}</p>
     </div>
 
-    <div class="topbar-summary">
-      <span>当前账号</span>
-      <strong>{{ user?.name ?? '访客' }}</strong>
+    <div class="topbar-right">
+      <div class="account-chip">
+        <span>当前账号</span>
+        <strong>{{ user?.name ?? '访客' }}</strong>
+      </div>
     </div>
   </header>
 </template>
 
-<style scoped>
+<style scoped lang="less">
 .shell-topbar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
   gap: 1rem;
-  padding: 1.1rem 1.25rem;
-  border-radius: 18px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow:
-    0 10px 26px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-}
+  min-height: 56px;
+  padding: 0 18px;
+  background: linear-gradient(90deg, #3b73d8 0%, #4d84e4 55%, #5d91eb 100%);
+  color: #ffffff;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.16);
 
-.topbar-main {
-  min-width: 0;
-}
-
-.shell-topbar h2 {
-  margin-top: 0.28rem;
-  color: #0f172a;
-  font-size: 1.45rem;
-  line-height: 1.15;
-  font-weight: 700;
-}
-
-.page-eyebrow {
-  color: #2563eb;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-size: 0.68rem;
-  font-weight: 700;
-}
-
-.page-hint {
-  margin-top: 0.52rem;
-  max-width: 680px;
-  color: #64748b;
-  line-height: 1.55;
-  font-size: 0.88rem;
-}
-
-.topbar-summary {
-  min-width: 156px;
-  padding: 0.78rem 0.88rem;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.topbar-summary span {
-  display: block;
-  color: #64748b;
-  font-size: 0.76rem;
-}
-
-.topbar-summary strong {
-  display: block;
-  margin-top: 0.2rem;
-  color: #0f172a;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-@media (max-width: 720px) {
-  .shell-topbar {
-    flex-direction: column;
-    align-items: stretch;
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+    flex: 1;
   }
 
-  .topbar-summary {
+  .title-group {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
     min-width: 0;
+    flex-shrink: 0;
+
+    .page-label {
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    h2 {
+      color: #ffffff;
+      font-size: 1.15rem;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+  }
+
+  .page-hint {
+    min-width: 0;
+    max-width: 620px;
+    padding-left: 1rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .topbar-right {
+    flex-shrink: 0;
+  }
+
+  .account-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.38rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.14);
+
+    span {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.76rem;
+      white-space: nowrap;
+    }
+
+    strong {
+      color: #ffffff;
+      font-size: 0.88rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .shell-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 0.85rem 1rem;
+
+    .topbar-left {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.55rem;
+      width: 100%;
+    }
+
+    .title-group {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .page-hint {
+      max-width: none;
+      padding-left: 0;
+      border-left: 0;
+    }
   }
 }
 </style>

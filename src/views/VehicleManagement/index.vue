@@ -6,7 +6,6 @@ import EntityForm from '@/components/EntityForm.vue'
 import QueryFilterForm from '@/components/QueryFilterForm.vue'
 import type { FormModel, TableColumnSchema, TablePagination } from '@/components/formSchemas'
 import { useDialog } from '@/composables/useDialog'
-import type { AiAssistResult } from '@/services/ai/types'
 import {
   createVehicleApi,
   deleteVehicleApi,
@@ -28,6 +27,7 @@ import {
   createVehicleQueryInitialValue,
 } from '@/features/vehicle/formSchema'
 import type {
+  AiAssistResult,
   CreateVehiclePayload,
   UpdateVehiclePayload,
   VehicleAiAssistDto,

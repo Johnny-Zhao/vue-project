@@ -180,6 +180,38 @@ function resolveMessageByStatus(status: number) {
   return `Request failed with status ${status}.`
 }
 
+function isApiFailureResponse(value: unknown): value is ApiFailureResponse {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    'succeed' in (value as Record<string, unknown>) &&
+    (value as Record<string, unknown>).succeed === false &&
+    typeof (value as Record<string, unknown>).message === 'string'
+  )
+}
+
+function isBackendFailureResponse(value: unknown): value is BackendResponse<unknown> {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    'succeed' in (value as Record<string, unknown>) &&
+    (value as Record<string, unknown>).succeed === false &&
+    typeof (value as Record<string, unknown>).msg === 'string'
+  )
+}
+
+function resolveMessageFromErrorResponse(data: unknown, status: number) {
+  if (isApiFailureResponse(data) && data.message.trim()) {
+    return data.message
+  }
+
+  if (isBackendFailureResponse(data) && data.msg.trim()) {
+    return data.msg
+  }
+
+  return resolveMessageByStatus(status)
+}
+
 function notifyGlobalError(message: string, suppressGlobalErrorMessage = false) {
   if (suppressGlobalErrorMessage) {
     return
@@ -209,8 +241,12 @@ function handleUnauthorized() {
   unauthorizedHandler?.()
 }
 
-function throwStatusError(status: number, suppressGlobalErrorMessage = false): never {
-  const message = resolveMessageByStatus(status)
+function throwStatusError(
+  status: number,
+  responseData?: unknown,
+  suppressGlobalErrorMessage = false,
+): never {
+  const message = resolveMessageFromErrorResponse(responseData, status)
 
   if (status === 401) {
     handleUnauthorized()
@@ -295,7 +331,7 @@ export async function request<
 
     if (error instanceof AxiosError) {
       if (error.response?.status) {
-        throwStatusError(error.response.status, suppressGlobalErrorMessage)
+        throwStatusError(error.response.status, error.response.data, suppressGlobalErrorMessage)
       }
 
       const fallbackMessage = 'Network request failed. Please try again.'

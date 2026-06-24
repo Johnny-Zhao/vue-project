@@ -1,6 +1,6 @@
 import { requestApi } from '@/api/request'
-import type { AiAssistResult } from '@/services/ai/types'
 import type {
+  AiAssistResult,
   CreateVehiclePayload,
   UpdateVehiclePayload,
   VehicleAiAssistDto,

@@ -6,8 +6,6 @@ const rolePermissionMap: Record<UserRole, AppPermission[]> = {
     'task:edit',
     'task:delete',
     'task:status:update',
-    'truck:view',
-    'truck:batch',
     'ai:config',
     'user:manage',
   ],

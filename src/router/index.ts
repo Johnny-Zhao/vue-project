@@ -5,7 +5,6 @@ import { auditLogRoutes } from './modules/audit-log'
 import { authRoutes } from './modules/auth'
 import { systemRoutes } from './modules/system'
 import { taskRoutes } from './modules/task'
-import { truckRoutes } from './modules/truck'
 import { vehicleRoutes } from './modules/vehicle'
 
 const router = createRouter({
@@ -15,13 +14,7 @@ const router = createRouter({
     {
       path: '/',
       component: AppLayout,
-      children: [
-        ...taskRoutes,
-        ...systemRoutes,
-        ...truckRoutes,
-        ...vehicleRoutes,
-        ...auditLogRoutes,
-      ],
+      children: [...taskRoutes, ...systemRoutes, ...vehicleRoutes, ...auditLogRoutes],
     },
   ],
 })
