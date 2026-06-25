@@ -59,6 +59,18 @@ async function initializeDatabase(connection: Pool) {
   `)
 
   await connection.query(`
+    CREATE TABLE IF NOT EXISTS vehicle_ai_feedback (
+      id SERIAL PRIMARY KEY,
+      vehicle_id INTEGER NOT NULL REFERENCES fleet_vehicles (id) ON DELETE CASCADE,
+      feedback_type VARCHAR(20) NOT NULL,
+      comment VARCHAR(300) NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL,
+      created_by_id INTEGER NOT NULL,
+      created_by_name VARCHAR(30) NOT NULL
+    );
+  `)
+
+  await connection.query(`
     CREATE TABLE IF NOT EXISTS ai_runtime_config (
       id INTEGER PRIMARY KEY,
       model VARCHAR(60) NOT NULL,

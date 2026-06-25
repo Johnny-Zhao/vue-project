@@ -10,6 +10,7 @@ export interface ApiFailureResponse {
   message: string
   data: null
   succeed: false
+  errorCode?: string
 }
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiFailureResponse

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { RequestError } from '@/api/request'
 import CrudTable from '@/components/CrudTable.vue'
 import EntityForm from '@/components/EntityForm.vue'
 import QueryFilterForm from '@/components/QueryFilterForm.vue'
@@ -12,6 +14,7 @@ import {
   fetchVehicleDetailApi,
   fetchVehiclesApi,
   generateVehicleAssistApi,
+  submitVehicleAiFeedbackApi,
   updateVehicleApi,
 } from '@/features/vehicle/api'
 import {
@@ -31,6 +34,7 @@ import type {
   CreateVehiclePayload,
   UpdateVehiclePayload,
   VehicleAiAssistDto,
+  VehicleAiFeedbackType,
   VehicleItem,
   VehicleListQuery,
   VehicleQueryForm,
@@ -39,12 +43,15 @@ import type {
 
 type TableSortOrder = 'ascending' | 'descending' | null
 
+const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const aiLoading = ref(false)
+const feedbackSubmitting = ref<VehicleAiFeedbackType | null>(null)
 const deletingId = ref<number | null>(null)
 const requestError = ref('')
 const aiError = ref('')
+const aiErrorCode = ref<string | number | null>(null)
 const selectedVehicleId = ref<number | null>(null)
 const aiDrawerVisible = ref(false)
 const aiVehicle = ref<VehicleItem | null>(null)
@@ -71,6 +78,7 @@ const vehicleDialog = useDialog<VehicleItem>({
 const queryFields = createVehicleQueryFields()
 const formFields = createVehicleFormFields()
 
+// 统一生成分页配置，供公共表格组件复用。
 const pagination = computed<TablePagination>(() => ({
   currentPage: currentPage.value,
   pageSize: pageSize.value,
@@ -78,6 +86,7 @@ const pagination = computed<TablePagination>(() => ({
   pageSizes: [10, 20, 50],
 }))
 
+// 组装车辆列表列定义。
 const columns = computed<TableColumnSchema<VehicleItem>[]>(() => [
   {
     key: 'plateNumber',
@@ -135,33 +144,174 @@ const columns = computed<TableColumnSchema<VehicleItem>[]>(() => [
   },
 ])
 
+// 判断当前弹窗是否处于编辑模式。
 const isEditing = computed(
   () => vehicleDialog.mode.value === 'edit' && selectedVehicleId.value !== null,
 )
 
+// 统一提取请求错误文案。
 function resolveErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '请求失败，请稍后重试'
 }
 
-// 格式化 AI 分析置信度展示文本。
+// 提取请求中的业务错误码，供 AI 失败态展示使用。
+function resolveErrorCode(error: unknown) {
+  return error instanceof RequestError ? (error.errorCode ?? null) : null
+}
+
+// 生成 AI 失败态引导文案。
+function resolveAiErrorActionText() {
+  if (aiErrorCode.value === 'AI_NO_API_KEY') {
+    return '前往 AI 配置页'
+  }
+
+  if (aiErrorCode.value === 'AI_MANUAL_REFRESH_DISABLED') {
+    return '前往 AI 配置页'
+  }
+
+  if (
+    aiErrorCode.value === 'AI_TIMEOUT' ||
+    aiErrorCode.value === 'AI_PROVIDER_ERROR' ||
+    aiErrorCode.value === 'AI_EMPTY_OUTPUT' ||
+    aiErrorCode.value === 'AI_INVALID_OUTPUT'
+  ) {
+    return '重新分析'
+  }
+
+  return ''
+}
+
+// 判断当前失败态是否适合跳转到 AI 配置页。
+function shouldGoAiConfig() {
+  return aiErrorCode.value === 'AI_NO_API_KEY' || aiErrorCode.value === 'AI_MANUAL_REFRESH_DISABLED'
+}
+
+// 判断当前失败态是否适合再次重试分析。
+function shouldRetryAiAnalysis() {
+  return (
+    aiErrorCode.value === 'AI_TIMEOUT' ||
+    aiErrorCode.value === 'AI_PROVIDER_ERROR' ||
+    aiErrorCode.value === 'AI_EMPTY_OUTPUT' ||
+    aiErrorCode.value === 'AI_INVALID_OUTPUT'
+  )
+}
+
+// 提供失败态下的下一步引导动作。
+async function handleAiErrorAction() {
+  if (shouldGoAiConfig()) {
+    await router.push({ name: 'aiConfigManagement' })
+    return
+  }
+
+  if (shouldRetryAiAnalysis() && aiVehicle.value) {
+    await openAiDrawer(aiVehicle.value, { forceRefresh: true })
+  }
+}
+
+// 为不同 AI 结果状态生成更直观的页面提示。
+function resolveAiStatusTone() {
+  const runtime = aiResult.value?.runtime
+
+  if (!runtime) {
+    return 'info'
+  }
+
+  if (runtime.resultStatus === 'api-success') {
+    return 'success'
+  }
+
+  if (runtime.resultStatus === 'cache-hit') {
+    return runtime.refreshRecommended ? 'warning' : 'info'
+  }
+
+  if (runtime.resultStatus === 'last-success-fallback') {
+    return 'warning'
+  }
+
+  return 'danger'
+}
+
+// 为不同 AI 结果状态生成概括标题。
+function resolveAiStatusTitle() {
+  const runtime = aiResult.value?.runtime
+
+  if (!runtime) {
+    return ''
+  }
+
+  if (runtime.resultStatus === 'api-success') {
+    return '当前展示的是最新实时生成结果'
+  }
+
+  if (runtime.resultStatus === 'cache-hit') {
+    return runtime.refreshRecommended
+      ? '当前展示的是历史结果，建议重新分析'
+      : '当前展示的是已保存的历史结果'
+  }
+
+  if (runtime.resultStatus === 'last-success-fallback') {
+    return '本次分析失败，已回退到最近一次成功结果'
+  }
+
+  if (runtime.resultStatus === 'mock-generated') {
+    return '当前展示的是规则生成结果'
+  }
+
+  if (runtime.resultStatus === 'rule-fallback') {
+    return '当前展示的是降级兜底结果'
+  }
+
+  return '当前展示的是 AI 分析结果'
+}
+
+// 为不同 AI 结果状态生成操作建议。
+function resolveAiStatusDescription() {
+  const runtime = aiResult.value?.runtime
+
+  if (!runtime) {
+    return ''
+  }
+
+  if (runtime.resultStatus === 'api-success') {
+    return '可以直接用于演示 AI 对车辆档案的摘要和异常识别能力。'
+  }
+
+  if (runtime.resultStatus === 'cache-hit') {
+    return runtime.refreshRecommended
+      ? '车辆档案已经发生变化，建议点击“重新分析”刷新结论。'
+      : '当前缓存仍可直接使用，适合快速演示。'
+  }
+
+  if (runtime.resultStatus === 'last-success-fallback') {
+    return '当前结果仍可用于展示，但建议在服务恢复后重新分析。'
+  }
+
+  if (runtime.resultStatus === 'mock-generated') {
+    return '这是无 Key 场景下的规则结果，适合演示降级设计。'
+  }
+
+  return '当前结果来自规则兜底，建议排查 AI 配置或服务状态。'
+}
+
+// 格式化 AI 置信度展示。
 function formatConfidence(value: AiAssistResult['confidence']) {
   return value === 'high' ? '高' : value === 'medium' ? '中' : '低'
 }
 
-// 格式化 AI 分析来源展示文本。
+// 格式化 AI 来源展示。
 function formatAiSource(value: AiAssistResult['source']) {
   if (value === 'api') {
     return 'OpenAI'
   }
 
   if (value === 'mock') {
-    return '规则兜底'
+    return '规则结果'
   }
 
   return '降级结果'
 }
 
-// 格式化 AI 请求模式展示文本。
+// 格式化 AI 请求模式展示。
 function formatAiRequestMode(value?: NonNullable<AiAssistResult['runtime']>['requestMode']) {
   if (value === 'cache-hit') {
     return '命中缓存'
@@ -174,17 +324,75 @@ function formatAiRequestMode(value?: NonNullable<AiAssistResult['runtime']>['req
   return '实时生成'
 }
 
-// 将布尔状态格式化为更直观的展示文案。
+// 格式化 AI 最终结果状态。
+function formatAiResultStatus(value?: NonNullable<AiAssistResult['runtime']>['resultStatus']) {
+  if (value === 'api-success') {
+    return '实时生成成功'
+  }
+
+  if (value === 'cache-hit') {
+    return '命中历史结果'
+  }
+
+  if (value === 'mock-generated') {
+    return '规则结果'
+  }
+
+  if (value === 'last-success-fallback') {
+    return '回退最近成功结果'
+  }
+
+  if (value === 'rule-fallback') {
+    return '规则降级结果'
+  }
+
+  return '未知状态'
+}
+
+// 格式化 AI 失败原因码。
+function formatAiFailureCode(value?: NonNullable<AiAssistResult['runtime']>['failureCode']) {
+  if (value === 'AI_NO_API_KEY') {
+    return '未配置 API Key'
+  }
+
+  if (value === 'AI_TIMEOUT') {
+    return 'AI 请求超时'
+  }
+
+  if (value === 'AI_PROVIDER_ERROR') {
+    return 'AI 服务异常'
+  }
+
+  if (value === 'AI_EMPTY_OUTPUT') {
+    return 'AI 返回为空'
+  }
+
+  if (value === 'AI_INVALID_OUTPUT') {
+    return 'AI 输出不可解析'
+  }
+
+  if (value === 'AI_SAVE_FAILED') {
+    return '分析结果保存失败'
+  }
+
+  if (value === 'AI_MANUAL_REFRESH_DISABLED') {
+    return '手动重算已关闭'
+  }
+
+  return value || '-'
+}
+
+// 统一格式化布尔状态文案。
 function formatBooleanState(value: boolean, truthyLabel: string, falsyLabel: string) {
   return value ? truthyLabel : falsyLabel
 }
 
-// 判断车牌号格式是否存在可疑情况。
+// 判断车牌号格式是否可疑。
 function isSuspiciousPlateNumber(value: string) {
   return !/^[A-Z]{2}-[A-Z0-9]{5,8}$/.test(value.trim().toUpperCase())
 }
 
-// 计算距离最近更新时间已过去多少天。
+// 计算距离上次更新时间已过去多少天。
 function getDaysSince(value: string) {
   const timestamp = Date.parse(value)
 
@@ -297,6 +505,7 @@ async function openAiDrawer(row: VehicleItem, options: { forceRefresh?: boolean 
   aiVehicle.value = row
   aiResult.value = null
   aiError.value = ''
+  aiErrorCode.value = null
   aiLoading.value = true
 
   try {
@@ -306,6 +515,7 @@ async function openAiDrawer(row: VehicleItem, options: { forceRefresh?: boolean 
     })
   } catch (error) {
     aiError.value = resolveErrorMessage(error)
+    aiErrorCode.value = resolveErrorCode(error)
   } finally {
     aiLoading.value = false
   }
@@ -320,12 +530,13 @@ async function refreshAiResult() {
   await openAiDrawer(aiVehicle.value, { forceRefresh: true })
 }
 
-// 关闭 AI 分析抽屉并清理状态。
+// 关闭 AI 抽屉并清理状态。
 function closeAiDrawer() {
   aiDrawerVisible.value = false
   aiVehicle.value = null
   aiResult.value = null
   aiError.value = ''
+  aiErrorCode.value = null
 }
 
 // 打开新增车辆弹窗。
@@ -357,6 +568,35 @@ async function copyAiResult() {
     ElMessage.success('AI 分析结果已复制')
   } catch {
     ElMessage.error('复制失败，请稍后重试')
+  }
+}
+
+// 提交 AI 结果反馈，形成“分析后有人评价”的业务闭环。
+async function submitAiFeedback(feedbackType: VehicleAiFeedbackType) {
+  if (!aiVehicle.value || feedbackSubmitting.value) {
+    return
+  }
+
+  feedbackSubmitting.value = feedbackType
+
+  try {
+    await submitVehicleAiFeedbackApi({
+      vehicleId: aiVehicle.value.id,
+      feedbackType,
+    })
+
+    const successText =
+      feedbackType === 'helpful'
+        ? '已记录“有帮助”反馈'
+        : feedbackType === 'inaccurate'
+          ? '已记录“不准确”反馈'
+          : '已记录“需重试”反馈'
+
+    ElMessage.success(successText)
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
+  } finally {
+    feedbackSubmitting.value = null
   }
 }
 
@@ -621,17 +861,52 @@ void loadVehicles()
         </div>
 
         <div v-if="aiLoading" class="ai-placeholder">正在生成车辆 AI 分析结果...</div>
-        <div v-else-if="aiError" class="ai-error">{{ aiError }}</div>
+        <div v-else-if="aiError" class="ai-error">
+          <p>{{ aiError }}</p>
+          <p v-if="aiErrorCode" class="ai-error-code">失败原因码：{{ aiErrorCode }}</p>
+          <div v-if="resolveAiErrorActionText()" class="ai-error-actions">
+            <el-button size="small" type="primary" @click="handleAiErrorAction">
+              {{ resolveAiErrorActionText() }}
+            </el-button>
+          </div>
+        </div>
 
         <div v-else-if="aiResult" class="ai-result">
           <div class="ai-meta">
             <span>置信度：{{ formatConfidence(aiResult.confidence) }}</span>
             <span>来源：{{ formatAiSource(aiResult.source) }}</span>
-            <span v-if="aiResult.cached">缓存结果</span>
+            <span v-if="aiResult.cached">已命中缓存</span>
             <span>生成时间：{{ aiResult.generatedAt }}</span>
           </div>
 
           <p v-if="aiResult.notice" class="ai-notice">{{ aiResult.notice }}</p>
+
+          <section
+            v-if="aiResult.runtime"
+            class="ai-status-banner"
+            :class="`ai-status-banner--${resolveAiStatusTone()}`"
+          >
+            <strong>{{ resolveAiStatusTitle() }}</strong>
+            <span>{{ resolveAiStatusDescription() }}</span>
+            <div class="ai-status-actions">
+              <el-button
+                v-if="aiResult.runtime.refreshRecommended"
+                size="small"
+                type="primary"
+                @click="refreshAiResult"
+              >
+                重新分析
+              </el-button>
+              <el-button
+                v-if="aiResult.runtime.failureCode === 'AI_NO_API_KEY'"
+                size="small"
+                plain
+                @click="router.push({ name: 'aiConfigManagement' })"
+              >
+                前往 AI 配置页
+              </el-button>
+            </div>
+          </section>
 
           <section v-if="aiResult.runtime" class="ai-runtime-card">
             <div class="ai-runtime-head">
@@ -640,6 +915,10 @@ void loadVehicles()
             </div>
 
             <div class="ai-runtime-grid">
+              <article class="ai-runtime-item">
+                <span>结果状态</span>
+                <strong>{{ formatAiResultStatus(aiResult.runtime.resultStatus) }}</strong>
+              </article>
               <article class="ai-runtime-item">
                 <span>服务提供方</span>
                 <strong>{{ aiResult.runtime.provider }}</strong>
@@ -655,6 +934,12 @@ void loadVehicles()
               <article class="ai-runtime-item">
                 <span>超时设置</span>
                 <strong>{{ aiResult.runtime.timeoutMs }} ms</strong>
+              </article>
+              <article class="ai-runtime-item">
+                <span>降级状态</span>
+                <strong>{{
+                  formatBooleanState(aiResult.runtime.degraded, '已降级', '正常结果')
+                }}</strong>
               </article>
               <article class="ai-runtime-item">
                 <span>结果持久化</span>
@@ -684,6 +969,10 @@ void loadVehicles()
                   }}
                 </strong>
               </article>
+              <article v-if="aiResult.runtime.failureCode" class="ai-runtime-item">
+                <span>失败原因码</span>
+                <strong>{{ formatAiFailureCode(aiResult.runtime.failureCode) }}</strong>
+              </article>
             </div>
 
             <p class="ai-runtime-tip">当前接口地址：{{ aiResult.runtime.endpointLabel }}</p>
@@ -709,6 +998,39 @@ void loadVehicles()
               <li v-for="item in aiResult.nextActions" :key="item">{{ item }}</li>
             </ul>
           </section>
+
+          <section class="ai-feedback-panel">
+            <div class="ai-feedback-copy">
+              <h4>AI 结果反馈</h4>
+              <p>把这次分析的使用体验记录下来，方便后续持续优化提示词和降级策略。</p>
+            </div>
+
+            <div class="ai-feedback-actions">
+              <el-button
+                size="small"
+                :loading="feedbackSubmitting === 'helpful'"
+                @click="submitAiFeedback('helpful')"
+              >
+                有帮助
+              </el-button>
+              <el-button
+                size="small"
+                :loading="feedbackSubmitting === 'inaccurate'"
+                @click="submitAiFeedback('inaccurate')"
+              >
+                不准确
+              </el-button>
+              <el-button
+                size="small"
+                type="primary"
+                plain
+                :loading="feedbackSubmitting === 'retry'"
+                @click="submitAiFeedback('retry')"
+              >
+                需重试
+              </el-button>
+            </div>
+          </section>
         </div>
       </section>
     </el-drawer>
@@ -720,6 +1042,12 @@ void loadVehicles()
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+
+  .head-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
 
   .error-banner {
     padding: 1rem 1.2rem;
@@ -738,7 +1066,8 @@ void loadVehicles()
   .ai-head-card,
   .ai-panel,
   .ai-detail-card,
-  .ai-runtime-card {
+  .ai-runtime-card,
+  .ai-status-banner {
     border: 1px solid rgba(29, 59, 54, 0.08);
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.92);
@@ -758,11 +1087,25 @@ void loadVehicles()
       font-weight: 700;
     }
 
+    .intro {
+      max-width: 32rem;
+      margin-top: 0.65rem;
+      color: #556260;
+      line-height: 1.7;
+    }
+
     .ai-head-actions {
       display: flex;
-      flex-wrap: wrap;
       gap: 0.75rem;
     }
+  }
+
+  .eyebrow {
+    color: #7a5d2d;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .ai-detail-grid {
@@ -803,12 +1146,81 @@ void loadVehicles()
   .ai-error {
     background: rgba(245, 108, 108, 0.12);
     color: #c45656;
+
+    .ai-error-code {
+      margin-top: 0.45rem;
+      color: #9f1239;
+      font-size: 0.82rem;
+    }
+
+    .ai-error-actions {
+      margin-top: 0.75rem;
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
   }
 
   .ai-result {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .ai-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    color: #7a5d2d;
+    font-size: 0.88rem;
+  }
+
+  .ai-notice {
+    background: #fcf2df;
+    color: #7a5d2d;
+  }
+
+  .ai-status-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1rem 1.1rem;
+
+    strong {
+      color: #173937;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    span {
+      color: #556260;
+      line-height: 1.65;
+    }
+
+    .ai-status-actions {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    &--success {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.22);
+    }
+
+    &--info {
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    &--warning {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.24);
+    }
+
+    &--danger {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.22);
+    }
   }
 
   .ai-runtime-card {
@@ -870,19 +1282,6 @@ void loadVehicles()
     }
   }
 
-  .ai-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    color: #7a5d2d;
-    font-size: 0.88rem;
-  }
-
-  .ai-notice {
-    background: #fcf2df;
-    color: #7a5d2d;
-  }
-
   .ai-panel {
     padding: 1rem 1.1rem;
     background: #f6f8f7;
@@ -901,19 +1300,45 @@ void loadVehicles()
       gap: 0.55rem;
     }
   }
+
+  .ai-feedback-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border: 1px dashed rgba(122, 93, 45, 0.28);
+    border-radius: 18px;
+    background: rgba(252, 242, 223, 0.38);
+
+    .ai-feedback-copy {
+      h4 {
+        color: #173937;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+
+      p {
+        margin-top: 0.45rem;
+        color: #556260;
+        line-height: 1.6;
+      }
+    }
+
+    .ai-feedback-actions {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+  }
 }
 
 @media (max-width: 980px) {
-  .vehicle-page {
-    .page-head {
-      flex-direction: column;
-      align-items: stretch;
-    }
-  }
-
   .ai-shell {
     .ai-head-card,
     .ai-detail-grid,
+    .ai-feedback-panel,
     .ai-runtime-card .ai-runtime-grid {
       flex-direction: column;
       grid-template-columns: 1fr;

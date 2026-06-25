@@ -1,15 +1,17 @@
 import { env } from '../../config/env.ts'
-import { createAuditLog } from '../auditLog/auditLog.repository.ts'
-import {
-  findAiRuntimeConfig,
-  updateAiRuntimeConfig as updateAiRuntimeConfigRecord,
-} from './aiConfig.repository.ts'
 import type {
+  AiFeedbackStatsEntity,
   AiRuntimeConfigEntity,
   AiRuntimeConfigView,
   UpdateAiRuntimeConfigPayload,
 } from '../../types/aiConfig.ts'
 import { AppError } from '../../utils/appError.ts'
+import { createAuditLog } from '../auditLog/auditLog.repository.ts'
+import {
+  findAiRuntimeConfig,
+  getAiFeedbackStats,
+  updateAiRuntimeConfig as updateAiRuntimeConfigRecord,
+} from './aiConfig.repository.ts'
 
 interface OperationContext {
   operatorId: number
@@ -17,7 +19,7 @@ interface OperationContext {
   requestId: string
 }
 
-// 返回当前 AI 运行配置，并补充敏感配置的只读状态。
+// 返回当前 AI 运行配置详情，并补充敏感配置的只读状态。
 export async function getAiRuntimeConfigDetail(): Promise<AiRuntimeConfigView> {
   const config = await findAiRuntimeConfig()
 
@@ -31,6 +33,11 @@ export async function getAiRuntimeConfigDetail(): Promise<AiRuntimeConfigView> {
 // 提供给 AI 运行时使用的当前配置快照。
 export async function getAiRuntimeConfigSnapshot(): Promise<AiRuntimeConfigView> {
   return getAiRuntimeConfigDetail()
+}
+
+// 返回 AI 分析反馈统计，给配置页面展示分析质量闭环。
+export async function getAiFeedbackStatsDetail(): Promise<AiFeedbackStatsEntity> {
+  return getAiFeedbackStats()
 }
 
 // 更新当前 AI 运行配置，并写入审计日志。

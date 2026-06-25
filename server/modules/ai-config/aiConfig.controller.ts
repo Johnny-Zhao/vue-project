@@ -1,8 +1,12 @@
 import type { UpdateAiRuntimeConfigPayload } from '../../types/aiConfig.ts'
 import type { ServerRequestHandler } from '../../types/http.ts'
-import { getAiRuntimeConfigDetail, updateAiRuntimeConfig } from './aiConfig.service.ts'
 import { createSuccessResponse } from '../../utils/apiResponse.ts'
 import { AppError } from '../../utils/appError.ts'
+import {
+  getAiFeedbackStatsDetail,
+  getAiRuntimeConfigDetail,
+  updateAiRuntimeConfig,
+} from './aiConfig.service.ts'
 
 // 从请求上下文中提取操作人信息，供审计日志复用。
 function getOperatorContext(req: Parameters<ServerRequestHandler>[0]) {
@@ -21,6 +25,12 @@ function getOperatorContext(req: Parameters<ServerRequestHandler>[0]) {
 export const getAiRuntimeConfig: ServerRequestHandler = async (_req, res) => {
   const data = await getAiRuntimeConfigDetail()
   res.json(createSuccessResponse(data, '已返回 AI 运行配置'))
+}
+
+// 返回 AI 反馈统计，帮助管理员观察分析闭环效果。
+export const getAiFeedbackStats: ServerRequestHandler = async (_req, res) => {
+  const data = await getAiFeedbackStatsDetail()
+  res.json(createSuccessResponse(data, '已返回 AI 反馈统计'))
 }
 
 // 更新当前 AI 运行配置。

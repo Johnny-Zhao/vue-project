@@ -1,5 +1,9 @@
 import { requestApi } from '@/api/request'
-import type { AiRuntimeConfigItem, UpdateAiRuntimeConfigPayload } from './types'
+import type {
+  AiFeedbackStatsItem,
+  AiRuntimeConfigItem,
+  UpdateAiRuntimeConfigPayload,
+} from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -7,6 +11,15 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 export function fetchAiRuntimeConfigApi() {
   return requestApi<AiRuntimeConfigItem>({
     url: '/ai-config',
+    method: 'GET',
+    baseURL: API_BASE_URL,
+  })
+}
+
+// 获取 AI 反馈统计。
+export function fetchAiFeedbackStatsApi() {
+  return requestApi<AiFeedbackStatsItem>({
+    url: '/ai-config/feedback-stats',
     method: 'GET',
     baseURL: API_BASE_URL,
   })

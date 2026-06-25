@@ -21,14 +21,14 @@ let unauthorizedHandler: UnauthorizedHandler | null = null
 
 export class RequestError extends Error {
   statusCode?: number
-  errorCode?: number
+  errorCode?: string | number
   isAuthError: boolean
 
   constructor(
     message: string,
     options: {
       statusCode?: number
-      errorCode?: number
+      errorCode?: string | number
       isAuthError?: boolean
     } = {},
   ) {
@@ -212,6 +212,14 @@ function resolveMessageFromErrorResponse(data: unknown, status: number) {
   return resolveMessageByStatus(status)
 }
 
+function resolveErrorCodeFromErrorResponse(data: unknown) {
+  if (isApiFailureResponse(data) && data.errorCode) {
+    return data.errorCode
+  }
+
+  return undefined
+}
+
 function notifyGlobalError(message: string, suppressGlobalErrorMessage = false) {
   if (suppressGlobalErrorMessage) {
     return
@@ -247,6 +255,7 @@ function throwStatusError(
   suppressGlobalErrorMessage = false,
 ): never {
   const message = resolveMessageFromErrorResponse(responseData, status)
+  const errorCode = resolveErrorCodeFromErrorResponse(responseData)
 
   if (status === 401) {
     handleUnauthorized()
@@ -256,6 +265,7 @@ function throwStatusError(
 
   throw new RequestError(message, {
     statusCode: status,
+    errorCode,
     isAuthError: status === 401,
   })
 }
@@ -279,7 +289,7 @@ function unwrapApiResponse<T>(
 
   throw new RequestError(response.message || 'Request failed', {
     statusCode: response.code,
-    errorCode: response.code,
+    errorCode: response.errorCode ?? response.code,
     isAuthError: response.code === 401 && options.auth !== false,
   })
 }

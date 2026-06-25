@@ -117,6 +117,20 @@ export interface VehicleAiAssistRequest {
 export type AiConfidence = 'low' | 'medium' | 'high'
 export type AiSource = 'api' | 'mock' | 'fallback'
 export type AiRequestMode = 'cache-hit' | 'fresh-generate' | 'force-refresh'
+export type AiResultStatus =
+  | 'api-success'
+  | 'cache-hit'
+  | 'mock-generated'
+  | 'rule-fallback'
+  | 'last-success-fallback'
+export type AiFailureCode =
+  | 'AI_NO_API_KEY'
+  | 'AI_TIMEOUT'
+  | 'AI_PROVIDER_ERROR'
+  | 'AI_EMPTY_OUTPUT'
+  | 'AI_INVALID_OUTPUT'
+  | 'AI_SAVE_FAILED'
+  | 'AI_MANUAL_REFRESH_DISABLED'
 
 export interface AiRuntimeMeta {
   provider: string
@@ -126,10 +140,13 @@ export interface AiRuntimeMeta {
   cacheEnabled: boolean
   manualRefreshEnabled: boolean
   requestMode: AiRequestMode
+  resultStatus: AiResultStatus
   timeoutMs: number
   storeEnabled: boolean
   apiKeyConfigured: boolean
   refreshRecommended: boolean
+  degraded: boolean
+  failureCode?: AiFailureCode
 }
 
 export interface AiAssistResult {
@@ -142,4 +159,12 @@ export interface AiAssistResult {
   generatedAt: string
   notice?: string
   runtime?: AiRuntimeMeta
+}
+
+export type VehicleAiFeedbackType = 'helpful' | 'inaccurate' | 'retry'
+
+export interface VehicleAiFeedbackPayload {
+  vehicleId: number
+  feedbackType: VehicleAiFeedbackType
+  comment?: string
 }

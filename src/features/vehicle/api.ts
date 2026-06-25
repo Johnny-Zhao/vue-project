@@ -2,6 +2,7 @@ import { requestApi } from '@/api/request'
 import type {
   AiAssistResult,
   CreateVehiclePayload,
+  VehicleAiFeedbackPayload,
   UpdateVehiclePayload,
   VehicleAiAssistDto,
   VehicleAiAssistRequest,
@@ -68,5 +69,18 @@ export function generateVehicleAssistApi(payload: VehicleAiAssistRequest) {
     data: payload,
     baseURL: API_BASE_URL,
     suppressGlobalErrorMessage: true,
+  })
+}
+
+// 提交车辆 AI 结果反馈。
+export function submitVehicleAiFeedbackApi(payload: VehicleAiFeedbackPayload) {
+  return requestApi<
+    { id: number; vehicleId: number; feedbackType: string },
+    VehicleAiFeedbackPayload
+  >({
+    url: '/ai/vehicle-feedback',
+    method: 'POST',
+    data: payload,
+    baseURL: API_BASE_URL,
   })
 }

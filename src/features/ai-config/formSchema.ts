@@ -46,7 +46,7 @@ export function createAiRuntimeConfigFields(): FormFieldSchema[] {
     },
     {
       key: 'openaiStore',
-      label: '开启 OpenAI Store',
+      label: '启用 OpenAI Store',
       type: 'switch',
       defaultValue: false,
     },

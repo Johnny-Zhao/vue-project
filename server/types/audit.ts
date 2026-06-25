@@ -1,5 +1,5 @@
 export type AuditModule = 'vehicle' | 'vehicleAi' | 'aiConfig'
-export type AuditAction = 'create' | 'update' | 'delete' | 'analyze'
+export type AuditAction = 'create' | 'update' | 'delete' | 'analyze' | 'feedback'
 
 export interface AuditLogPayload {
   module: AuditModule

@@ -1,5 +1,10 @@
 import { getPostgresPool } from '../../pg/database/postgres.ts'
-import type { AiRuntimeConfigEntity, AiRuntimeConfigRow } from '../../types/aiConfig.ts'
+import type {
+  AiFeedbackStatsEntity,
+  AiFeedbackStatsRow,
+  AiRuntimeConfigEntity,
+  AiRuntimeConfigRow,
+} from '../../types/aiConfig.ts'
 
 // 将数据库中的 AI 运行配置记录映射为服务层结构。
 function mapAiRuntimeConfigRow(row?: AiRuntimeConfigRow | null): AiRuntimeConfigEntity | null {
@@ -18,6 +23,22 @@ function mapAiRuntimeConfigRow(row?: AiRuntimeConfigRow | null): AiRuntimeConfig
     updatedAt: row.updatedAt,
     updatedById: Number(row.updatedById),
     updatedByName: row.updatedByName,
+  }
+}
+
+// 汇总车辆 AI 分析结果的反馈统计，用于配置页展示闭环状态。
+function mapAiFeedbackStatsRow(row?: AiFeedbackStatsRow | null): AiFeedbackStatsEntity {
+  return {
+    helpfulCount: Number(row?.helpfulCount ?? 0),
+    inaccurateCount: Number(row?.inaccurateCount ?? 0),
+    retryCount: Number(row?.retryCount ?? 0),
+    latestFeedbackAt: row?.latestFeedbackAt ?? null,
+    latestVehicleId:
+      row?.latestVehicleId === null || row?.latestVehicleId === undefined
+        ? null
+        : Number(row.latestVehicleId),
+    latestVehiclePlateNumber: row?.latestVehiclePlateNumber ?? '',
+    latestFeedbackType: row?.latestFeedbackType ?? null,
   }
 }
 
@@ -89,4 +110,44 @@ export async function updateAiRuntimeConfig(payload: {
   )
 
   return findAiRuntimeConfig()
+}
+
+// 读取 AI 反馈统计，帮助管理员观察分析结果是否稳定可用。
+export async function getAiFeedbackStats() {
+  const pool = await getPostgresPool()
+  const result = await pool.query<AiFeedbackStatsRow>(
+    `
+      WITH latest_feedback AS (
+        SELECT
+          feedback.created_at AS "latestFeedbackAt",
+          feedback.vehicle_id AS "latestVehicleId",
+          feedback.feedback_type AS "latestFeedbackType",
+          vehicle.plate_number AS "latestVehiclePlateNumber"
+        FROM vehicle_ai_feedback AS feedback
+        LEFT JOIN fleet_vehicles AS vehicle
+          ON vehicle.id = feedback.vehicle_id
+        ORDER BY feedback.created_at DESC, feedback.id DESC
+        LIMIT 1
+      ),
+      feedback_summary AS (
+        SELECT
+          COUNT(*) FILTER (WHERE feedback_type = 'helpful')::text AS "helpfulCount",
+          COUNT(*) FILTER (WHERE feedback_type = 'inaccurate')::text AS "inaccurateCount",
+          COUNT(*) FILTER (WHERE feedback_type = 'retry')::text AS "retryCount"
+        FROM vehicle_ai_feedback
+      )
+      SELECT
+        feedback_summary."helpfulCount",
+        feedback_summary."inaccurateCount",
+        feedback_summary."retryCount",
+        latest_feedback."latestFeedbackAt",
+        latest_feedback."latestVehicleId",
+        latest_feedback."latestVehiclePlateNumber",
+        latest_feedback."latestFeedbackType"
+      FROM feedback_summary
+      LEFT JOIN latest_feedback ON TRUE;
+    `,
+  )
+
+  return mapAiFeedbackStatsRow(result.rows[0] ?? null)
 }

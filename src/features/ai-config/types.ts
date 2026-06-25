@@ -13,6 +13,18 @@ export interface AiRuntimeConfigItem {
   endpointLabel: string
 }
 
+export type AiFeedbackType = 'helpful' | 'inaccurate' | 'retry'
+
+export interface AiFeedbackStatsItem {
+  helpfulCount: number
+  inaccurateCount: number
+  retryCount: number
+  latestFeedbackAt: string | null
+  latestVehicleId: number | null
+  latestVehiclePlateNumber: string
+  latestFeedbackType: AiFeedbackType | null
+}
+
 export interface UpdateAiRuntimeConfigPayload {
   model: string
   requestTimeoutMs: number
