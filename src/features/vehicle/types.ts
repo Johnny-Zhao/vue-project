@@ -125,7 +125,10 @@ export type AiResultStatus =
   | 'last-success-fallback'
 export type AiFailureCode =
   | 'AI_NO_API_KEY'
+  | 'AI_RATE_LIMITED'
   | 'AI_TIMEOUT'
+  | 'AI_NETWORK_ERROR'
+  | 'AI_PROVIDER_UNAVAILABLE'
   | 'AI_PROVIDER_ERROR'
   | 'AI_EMPTY_OUTPUT'
   | 'AI_INVALID_OUTPUT'

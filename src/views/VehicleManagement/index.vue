@@ -170,7 +170,10 @@ function resolveAiErrorActionText() {
   }
 
   if (
+    aiErrorCode.value === 'AI_RATE_LIMITED' ||
     aiErrorCode.value === 'AI_TIMEOUT' ||
+    aiErrorCode.value === 'AI_NETWORK_ERROR' ||
+    aiErrorCode.value === 'AI_PROVIDER_UNAVAILABLE' ||
     aiErrorCode.value === 'AI_PROVIDER_ERROR' ||
     aiErrorCode.value === 'AI_EMPTY_OUTPUT' ||
     aiErrorCode.value === 'AI_INVALID_OUTPUT'
@@ -189,7 +192,10 @@ function shouldGoAiConfig() {
 // 判断当前失败态是否适合再次重试分析。
 function shouldRetryAiAnalysis() {
   return (
+    aiErrorCode.value === 'AI_RATE_LIMITED' ||
     aiErrorCode.value === 'AI_TIMEOUT' ||
+    aiErrorCode.value === 'AI_NETWORK_ERROR' ||
+    aiErrorCode.value === 'AI_PROVIDER_UNAVAILABLE' ||
     aiErrorCode.value === 'AI_PROVIDER_ERROR' ||
     aiErrorCode.value === 'AI_EMPTY_OUTPUT' ||
     aiErrorCode.value === 'AI_INVALID_OUTPUT'

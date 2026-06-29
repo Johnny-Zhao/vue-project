@@ -1,10 +1,7 @@
 import OpenAI from 'openai'
+import { zodTextFormat } from 'openai/helpers/zod'
+import { z } from 'zod'
 import { env } from '../../config/env.ts'
-import { createAuditLog } from '../auditLog/auditLog.repository.ts'
-import {
-  findVehicleAiAnalysisByVehicleId,
-  upsertVehicleAiAnalysis,
-} from './vehicleAiAnalysis.repository.ts'
 import type {
   AiAssistResult,
   AiConfidence,
@@ -18,12 +15,21 @@ import type {
 } from '../../types/ai.ts'
 import type { AiRuntimeConfigView } from '../../types/aiConfig.ts'
 import { AppError } from '../../utils/appError.ts'
+import { createAuditLog } from '../auditLog/auditLog.repository.ts'
 import { getAiRuntimeConfigSnapshot } from '../ai-config/aiConfig.service.ts'
+import {
+  findVehicleAiAnalysisByVehicleId,
+  upsertVehicleAiAnalysis,
+} from './vehicleAiAnalysis.repository.ts'
 
-type OpenAiNormalizedResult = Pick<
-  AiAssistResult,
-  'summary' | 'risks' | 'nextActions' | 'confidence'
->
+const vehicleAssistResponseSchema = z.object({
+  summary: z.array(z.string().trim().min(1).max(120)).min(1).max(6),
+  risks: z.array(z.string().trim().min(1).max(120)).min(1).max(6),
+  nextActions: z.array(z.string().trim().min(1).max(120)).min(1).max(5),
+  confidence: z.enum(['low', 'medium', 'high']),
+})
+
+type OpenAiNormalizedResult = z.infer<typeof vehicleAssistResponseSchema>
 
 interface VehicleAiOperationContext {
   operatorId: number
@@ -42,7 +48,7 @@ type VehicleAiGenerationAttempt =
       notice: string
     }
 
-// 为当前请求创建 OpenAI 客户端，确保运行时配置改动后立刻生效。
+// 为当前请求创建 OpenAI 客户端，确保运行时配置更新后立即生效。
 function createOpenAiClient(runtimeConfig: AiRuntimeConfigView) {
   return new OpenAI({
     apiKey: env.openaiApiKey,
@@ -155,7 +161,7 @@ async function attemptVehicleAssistGeneration(
   }
 }
 
-// 生成最终 API 成功结果，供落库和前端展示复用。
+// 生成 API 实时分析成功结果。
 function buildApiVehicleAssistResult(
   result: OpenAiNormalizedResult,
   runtimeConfig: AiRuntimeConfigView,
@@ -168,7 +174,7 @@ function buildApiVehicleAssistResult(
   })
 }
 
-// 生成规则兜底结果，并带上降级原因码。
+// 生成规则兜底结果，并带上降级原因。
 function buildRuleFallbackVehicleAssistResult(
   dto: VehicleAiAssistDto,
   runtimeConfig: AiRuntimeConfigView,
@@ -178,7 +184,7 @@ function buildRuleFallbackVehicleAssistResult(
 ): AiAssistResult {
   const summary = [
     `车辆 ${dto.plateNumber} 属于${dto.vehicleType}，当前状态为${dto.status}。`,
-    `该车辆采用${dto.driveType}驱动，能源类型为${dto.energyType}。`,
+    `该车辆采用 ${dto.driveType} 驱动，能源类型为${dto.energyType}。`,
     dto.brandModel ? `品牌型号为 ${dto.brandModel}。` : '品牌型号尚未补录完整。',
     dto.metrics.daysSinceUpdate == null
       ? '最近更新时间缺失，暂时无法判断档案是否过旧。'
@@ -210,7 +216,7 @@ function buildRuleFallbackVehicleAssistResult(
   }
 }
 
-// 将数据库中的分析记录转换成接口返回结构。
+// 将数据库中的分析记录转换为接口返回结构。
 function buildPersistedVehicleAssistResult(
   entity: VehicleAiAnalysisEntity,
   requestMode: AiRequestMode,
@@ -241,7 +247,7 @@ function buildPersistedVehicleAssistResult(
   }
 }
 
-// 将数据库缓存结果转换成接口结构，并评估是否建议刷新。
+// 将数据库缓存结果转换成接口结果，并评估是否建议刷新。
 function buildCachedVehicleAssistResult(
   entity: VehicleAiAnalysisEntity,
   dto: VehicleAiAssistDto,
@@ -250,7 +256,7 @@ function buildCachedVehicleAssistResult(
   const isOutdated = hasSourceChanged(entity.sourceUpdatedAt, dto.updatedAt)
   const refreshRecommended = runtimeConfig.suggestRefreshOnSourceChange && isOutdated
   const cacheNotice = isOutdated
-    ? '当前展示的是已保存的历史分析结果，车辆档案已更新，建议重新分析以刷新结果。'
+    ? '当前展示的是已保存的历史分析结果，车辆档案已更新，建议重新分析以刷新结论。'
     : '当前展示的是数据库中最近一次已保存的 AI 分析结果。'
 
   return {
@@ -284,7 +290,7 @@ function buildRecoveredVehicleAssistResult(
   }
 }
 
-// 统一构建车辆 AI 的运行时元信息，方便前端做状态展示与面试讲解。
+// 统一构建车辆 AI 的运行时元信息，方便前端展示和日志追踪。
 function createVehicleAiRuntimeMeta(
   runtimeConfig: AiRuntimeConfigView,
   options: {
@@ -313,7 +319,7 @@ function createVehicleAiRuntimeMeta(
   }
 }
 
-// 合并主提示和次提示文案，避免覆盖有价值的上下文。
+// 合并主提示和补充提示，避免覆盖已有上下文。
 function mergeNotice(primaryNotice: string, secondaryNotice?: string) {
   if (!secondaryNotice || secondaryNotice === primaryNotice) {
     return primaryNotice
@@ -327,7 +333,7 @@ function resolveRequestMode(forceRefresh: boolean): AiRequestMode {
   return forceRefresh ? 'force-refresh' : 'fresh-generate'
 }
 
-// 根据失败原因判断是否还建议用户重新触发分析。
+// 根据失败原因判断是否建议用户再次触发分析。
 function shouldRecommendRefresh(failureCode?: AiFailureCode) {
   if (!failureCode) {
     return false
@@ -355,7 +361,7 @@ async function requestOpenAiVehicleAssist(
 ): Promise<OpenAiNormalizedResult> {
   const client = createOpenAiClient(runtimeConfig)
 
-  const response = (await client.responses.create({
+  const response = await client.responses.parse({
     model: runtimeConfig.model,
     store: runtimeConfig.openaiStore,
     instructions: [
@@ -367,12 +373,14 @@ async function requestOpenAiVehicleAssist(
     ].join(' '),
     input: JSON.stringify(dto),
     text: {
-      format: {
-        type: 'text',
-      },
+      format: zodTextFormat(vehicleAssistResponseSchema, 'vehicle_assist_result'),
     },
     max_output_tokens: 800,
-  })) as { output_text?: string }
+  })
+
+  if (response.output_parsed) {
+    return response.output_parsed
+  }
 
   const outputText = typeof response.output_text === 'string' ? response.output_text.trim() : ''
 
@@ -380,7 +388,7 @@ async function requestOpenAiVehicleAssist(
     throw new AppError('AI 返回内容为空，无法生成车辆分析结果。', 502, 'AI_EMPTY_OUTPUT')
   }
 
-  return normalizeModelOutput(outputText)
+  throw new AppError('AI 502', 502, 'AI_INVALID_OUTPUT')
 }
 
 // 兼容模型返回的 JSON 或普通文本格式。
@@ -498,10 +506,23 @@ function resolveAiFailureCode(error: unknown): AiFailureCode {
     return error.errorCode as AiFailureCode
   }
 
+  const statusCode = readStatusCode(error)
   const message = error instanceof Error ? error.message : String(error ?? '')
+
+  if (statusCode === 429 || /rate limit|too many requests|quota/i.test(message)) {
+    return 'AI_RATE_LIMITED'
+  }
+
+  if (statusCode !== null && statusCode >= 500) {
+    return 'AI_PROVIDER_UNAVAILABLE'
+  }
 
   if (/timeout|timed out|aborted|超时/i.test(message)) {
     return 'AI_TIMEOUT'
+  }
+
+  if (/enotfound|econnreset|econnrefused|network|fetch failed|socket hang up/i.test(message)) {
+    return 'AI_NETWORK_ERROR'
   }
 
   if (/invalid output|无法解析|parse|json/i.test(message)) {
@@ -516,8 +537,14 @@ function resolveAiFailureNotice(failureCode: AiFailureCode) {
   switch (failureCode) {
     case 'AI_NO_API_KEY':
       return '当前未配置 OPENAI_API_KEY，系统已切换为规则兜底结果。'
+    case 'AI_RATE_LIMITED':
+      return 'AI 服务当前触发限流，系统已切换为规则兜底结果。'
     case 'AI_TIMEOUT':
       return 'AI 请求超时，系统已自动切换为规则兜底结果。'
+    case 'AI_NETWORK_ERROR':
+      return 'AI 服务连接失败，系统已自动切换为规则兜底结果。'
+    case 'AI_PROVIDER_UNAVAILABLE':
+      return 'AI 服务暂时不可用，系统已自动切换为规则兜底结果。'
     case 'AI_EMPTY_OUTPUT':
       return 'AI 返回内容为空，系统已自动切换为规则兜底结果。'
     case 'AI_INVALID_OUTPUT':
@@ -529,6 +556,29 @@ function resolveAiFailureNotice(failureCode: AiFailureCode) {
     default:
       return 'AI 服务暂时不可用，系统已自动切换为规则兜底结果。'
   }
+}
+
+// 读取错误对象里的 HTTP 状态码，兼容不同 SDK 的异常结构。
+function readStatusCode(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return null
+  }
+
+  const maybeError = error as {
+    status?: unknown
+    statusCode?: unknown
+    response?: { status?: unknown }
+  }
+
+  const candidates = [maybeError.status, maybeError.statusCode, maybeError.response?.status]
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      return candidate
+    }
+  }
+
+  return null
 }
 
 // 持久化 AI 结果，并在需要时回退到最近一次成功结果。
