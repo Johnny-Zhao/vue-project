@@ -26,6 +26,7 @@ export interface ServerEnv {
   openaiApiKey: string
   openaiBaseUrl: string
   openaiModel: string
+  openaiEmbeddingModel: string
   openaiTimeoutMs: number
   openaiStore: boolean
 }
@@ -46,6 +47,7 @@ export const env: ServerEnv = {
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   openaiBaseUrl: process.env.OPENAI_BASE_URL || '',
   openaiModel: process.env.OPENAI_MODEL || 'gpt-5.4',
+  openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
   openaiTimeoutMs: Number(process.env.OPENAI_TIMEOUT_MS || 30000),
   openaiStore: process.env.OPENAI_STORE === 'true',
 }

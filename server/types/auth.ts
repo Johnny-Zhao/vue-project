@@ -6,6 +6,7 @@ export type AppPermission =
   | 'task:delete'
   | 'task:status:update'
   | 'ai:config'
+  | 'knowledge:manage'
   | 'user:manage'
 
 export interface AuthUser {

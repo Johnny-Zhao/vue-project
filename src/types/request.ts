@@ -45,6 +45,7 @@ export interface RequestConfig<
   baseURL?: string
   auth?: boolean
   dedupeKey?: string
+  timeout?: number
   suppressGlobalErrorMessage?: boolean
 }
 

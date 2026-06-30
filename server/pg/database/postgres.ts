@@ -86,6 +86,69 @@ async function initializeDatabase(connection: Pool) {
   `)
 
   await connection.query(`
+    CREATE TABLE IF NOT EXISTS knowledge_documents (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(120) NOT NULL,
+      file_name VARCHAR(200) NOT NULL,
+      content_type VARCHAR(80) NOT NULL,
+      raw_content TEXT NOT NULL,
+      summary VARCHAR(300) NOT NULL DEFAULT '',
+      status VARCHAR(20) NOT NULL,
+      chunk_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      created_by_id INTEGER NOT NULL,
+      created_by_name VARCHAR(30) NOT NULL
+    );
+  `)
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS knowledge_document_chunks (
+      id SERIAL PRIMARY KEY,
+      document_id INTEGER NOT NULL REFERENCES knowledge_documents (id) ON DELETE CASCADE,
+      chunk_index INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      keyword_signature TEXT NOT NULL DEFAULT '',
+      embedding_json JSONB,
+      char_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+  `)
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS knowledge_sessions (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(120) NOT NULL,
+      message_count INTEGER NOT NULL DEFAULT 0,
+      last_question VARCHAR(500) NOT NULL DEFAULT '',
+      last_answer_summary VARCHAR(300) NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      created_by_id INTEGER NOT NULL,
+      created_by_name VARCHAR(30) NOT NULL
+    );
+  `)
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS knowledge_session_messages (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER NOT NULL REFERENCES knowledge_sessions (id) ON DELETE CASCADE,
+      role VARCHAR(20) NOT NULL,
+      content TEXT NOT NULL,
+      document_ids_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      attachments_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      citations_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      runtime_json JSONB,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+  `)
+
+  await connection.query(`
+    ALTER TABLE knowledge_document_chunks
+    ADD COLUMN IF NOT EXISTS embedding_json JSONB
+  `)
+
+  await connection.query(`
     CREATE TABLE IF NOT EXISTS audit_logs (
       id SERIAL PRIMARY KEY,
       module VARCHAR(40) NOT NULL,

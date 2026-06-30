@@ -38,6 +38,18 @@ export const systemRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/knowledge-base',
+    name: 'knowledgeBase',
+    component: () => import('@/views/KnowledgeBase/index.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '知识库问答',
+      menu: true,
+      menuOrder: 5,
+      roles: ['admin', 'viewer'],
+    },
+  },
+  {
     path: '/ai-config-management',
     name: 'aiConfigManagement',
     component: () => import('@/views/AiConfigManagement/index.vue'),

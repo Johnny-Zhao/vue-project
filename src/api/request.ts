@@ -307,6 +307,7 @@ export async function request<
     signal,
     baseURL = DEFAULT_BASE_URL,
     auth = true,
+    timeout,
     suppressGlobalErrorMessage = false,
   } = config
 
@@ -327,6 +328,7 @@ export async function request<
       data,
       headers: createHeaders(config.headers, auth),
       signal: controller.signal,
+      timeout,
     })
 
     return response.data
