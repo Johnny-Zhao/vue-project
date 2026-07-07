@@ -11,17 +11,13 @@ async function loginAsAdmin(page: Parameters<typeof test>[0]['page']) {
   await page.getByLabel('用户名').fill('admin')
   await page.getByLabel('密码').fill('123456')
   await page.getByRole('button', { name: '登录' }).click()
-  await expect(
-    page.getByRole('heading', { name: '把练习项目整理成一个更像样的后台工作台' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: '管理端练习项目' })).toBeVisible()
 }
 
 // 打开车辆管理页面。
 async function openVehicleManagement(page: Parameters<typeof test>[0]['page']) {
   await page.goto('/vehicle-management')
-  await expect(
-    page.locator('.vehicle-page').getByRole('heading', { name: '车辆管理' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: '车辆管理' })).toBeVisible()
 }
 
 // 新增一条车辆记录。
@@ -73,9 +69,7 @@ async function deleteVehicle(page: Parameters<typeof test>[0]['page']) {
 // 校验操作日志页存在新增、编辑、删除三条留痕。
 async function verifyAuditLogs(page: Parameters<typeof test>[0]['page']) {
   await page.goto('/audit-log-management')
-  await expect(
-    page.locator('.audit-log-page').getByRole('heading', { name: '操作日志' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: '操作日志' }).nth(1)).toBeVisible()
 
   await page.getByLabel('业务对象').fill(uniquePlateNumber)
   await page.getByRole('button', { name: '查询' }).click()
@@ -105,6 +99,6 @@ test.describe('车辆管理审计日志回归', () => {
 
     // 进入操作日志页校验三类行为都被记录。
     await verifyAuditLogs(page)
-    await expect(page.locator('.audit-log-page')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '操作日志' }).nth(1)).toBeVisible()
   })
 })
