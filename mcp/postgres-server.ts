@@ -170,7 +170,6 @@ server.registerTool(
   'list_schemas',
   {
     description: '列出当前 PostgreSQL 实例中可访问的 schema。',
-    description: 'List schemas accessible in the current PostgreSQL instance.',
     annotations: {
       title: 'List Schemas',
       readOnlyHint: true,

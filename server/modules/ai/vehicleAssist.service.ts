@@ -388,7 +388,7 @@ async function requestOpenAiVehicleAssist(
     throw new AppError('AI 返回内容为空，无法生成车辆分析结果。', 502, 'AI_EMPTY_OUTPUT')
   }
 
-  throw new AppError('AI 502', 502, 'AI_INVALID_OUTPUT')
+  return normalizeModelOutput(outputText)
 }
 
 // 兼容模型返回的 JSON 或普通文本格式。

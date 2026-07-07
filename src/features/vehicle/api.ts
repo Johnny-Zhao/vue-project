@@ -4,7 +4,6 @@ import type {
   CreateVehiclePayload,
   VehicleAiFeedbackPayload,
   UpdateVehiclePayload,
-  VehicleAiAssistDto,
   VehicleAiAssistRequest,
   VehicleItem,
   VehicleListQuery,

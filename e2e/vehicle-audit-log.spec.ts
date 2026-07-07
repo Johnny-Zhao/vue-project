@@ -105,5 +105,6 @@ test.describe('车辆管理审计日志回归', () => {
 
     // 进入操作日志页校验三类行为都被记录。
     await verifyAuditLogs(page)
+    await expect(page.locator('.audit-log-page')).toBeVisible()
   })
 })

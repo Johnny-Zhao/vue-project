@@ -100,7 +100,7 @@ function stringifyParams(params: SerializableParams = {}) {
 function createHeaders(configHeaders?: Record<string, string>, auth = true) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(configHeaders ?? {}),
+    ...configHeaders,
   }
 
   if (auth) {

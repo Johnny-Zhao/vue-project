@@ -3,7 +3,7 @@ import { taskCategoryOptions, taskPriorityOptions, taskStatusOptions } from './c
 import type { CreateTaskForm } from './types'
 import { createDefaultTaskFormData, taskFormRules } from './composables/useTaskForm'
 
-function normalizeRules(rules: typeof taskFormRules[keyof typeof taskFormRules]) {
+function normalizeRules(rules: (typeof taskFormRules)[keyof typeof taskFormRules]) {
   if (!rules) {
     return undefined
   }
@@ -88,6 +88,6 @@ export function createTaskFormFields(): FormFieldSchema[] {
 export function createTaskFormInitialValue(source?: Partial<CreateTaskForm>) {
   return {
     ...createDefaultTaskFormData(),
-    ...(source ?? {}),
+    ...source,
   }
 }
